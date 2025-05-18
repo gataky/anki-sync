@@ -93,3 +93,6 @@ dmypy.json
 
 # Poetry
 poetry.lock
+
+# Anki
+*.apkg
