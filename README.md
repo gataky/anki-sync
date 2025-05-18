@@ -69,6 +69,9 @@ Anik-Sync is a Python tool designed to streamline the process of creating Anki f
      # Windows example: %APPDATA%\Anki2\User 1\collection.media
      # Linux example: ~/.local/share/Anki2/User 1/collection.media
      ```
+
+   *   `SHEET_ID`: The ID of the sheet you want to read from. Can be set as CLI args
+
    To make these persistent, add the `export` commands to your shell's configuration file (e.g., `~/.bashrc`, `~/.zshrc`, `~/.profile`).
 
 ## Spreadsheet Format
