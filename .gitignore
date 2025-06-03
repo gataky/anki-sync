@@ -96,3 +96,6 @@ poetry.lock
 
 # Anki
 *.apkg
+
+.envrc
+media/*
