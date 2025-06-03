@@ -4,7 +4,7 @@ import pandas as pd
 
 from anki_sync.utils.guid import generate_guid
 
-from .audio_synthesizer import AudioSynthesizer
+from .synthesizers.audio_synthesizer import AudioSynthesizer
 from .models import Word
 
 
