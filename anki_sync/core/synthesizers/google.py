@@ -1,19 +1,21 @@
 import os
-from typing import Optional
+
 from google.cloud import texttospeech
 from google.cloud.texttospeech_v1.types import SynthesizeSpeechResponse
+
 from .base import BaseSynthesizer
+
 
 class GoogleSynthesizer(BaseSynthesizer):
     """Google Cloud text-to-speech synthesizer implementation.
-    
+
     Uses Google Cloud Text-to-Speech API to generate speech synthesis.
     Requires Google Cloud credentials to be set up via GOOGLE_APPLICATION_CREDENTIALS.
     """
 
     def __init__(self):
         """Initialize the Google Cloud synthesizer.
-        
+
         Creates a new Text-to-Speech client using Google Cloud credentials.
         Handles initialization errors gracefully and sets client to None if failed.
         """
@@ -31,11 +33,11 @@ class GoogleSynthesizer(BaseSynthesizer):
 
     def synthesize(self, text: str, output_directory: str) -> None:
         """Synthesize text to speech using Google Cloud TTS.
-        
+
         Args:
             text: The text to synthesize into speech
             output_directory: Directory where the audio file will be saved
-            
+
         The audio file will be saved as {text}.mp3 in the output directory.
         Uses a Greek female voice (el-GR-Standard-B) for synthesis.
         """

@@ -1,14 +1,21 @@
 import os
-from typing import Optional, Literal
+from typing import Literal, Optional
+
+from .stats import Stats
 from .synthesizers.base import BaseSynthesizer
 from .synthesizers.elevenlabs import ElevenLabsSynthesizer
 from .synthesizers.google import GoogleSynthesizer
-from .stats import Stats
+
 
 class AudioSynthesizer:
     """Handles audio synthesis for words."""
 
-    def __init__(self, output_directory: str, stats: Stats, synthesizer_type: Literal["elevenlabs", "google"] = "elevenlabs"):
+    def __init__(
+        self,
+        output_directory: str,
+        stats: Stats,
+        synthesizer_type: Literal["elevenlabs", "google"] = "elevenlabs",
+    ):
         """Initialize the audio synthesizer.
 
         Args:
@@ -19,7 +26,9 @@ class AudioSynthesizer:
         self.output_directory = output_directory
         self.stats = stats
         self.synthesizer: BaseSynthesizer = (
-            ElevenLabsSynthesizer() if synthesizer_type == "elevenlabs" else GoogleSynthesizer()
+            ElevenLabsSynthesizer()
+            if synthesizer_type == "elevenlabs"
+            else GoogleSynthesizer()
         )
 
     def generate_sound_filename(self, word: str) -> Optional[str]:
@@ -43,5 +52,7 @@ class AudioSynthesizer:
             try:
                 self.synthesizer.synthesize(word, self.output_directory)
                 self.stats.audio_files_generated += 1
-            except Exception as e:
-                self.stats.errors["audio_synthesis"] = self.stats.errors.get("audio_synthesis", 0) + 1
+            except Exception:
+                self.stats.errors["audio_synthesis"] = (
+                    self.stats.errors.get("audio_synthesis", 0) + 1
+                )

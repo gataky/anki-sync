@@ -2,9 +2,10 @@ import hashlib
 import os
 from typing import List, Optional
 
-from genanki import Deck, Package, Note, Model
+from genanki import Deck, Model, Note, Package
 
 from .models import Word
+
 
 class AnkiDeckManager:
     """Manages the creation and packaging of Anki decks.
@@ -65,7 +66,9 @@ class AnkiDeckManager:
         deck_id = int(hashlib.md5(deck_name.encode("utf-8")).hexdigest(), 16) % (10**10)
         return Deck(deck_id, deck_name)
 
-    def _process_sound_file(self, word: Word, sound_files_dir: Optional[str]) -> tuple[str, List[str]]:
+    def _process_sound_file(
+        self, word: Word, sound_files_dir: Optional[str]
+    ) -> tuple[str, List[str]]:
         """Process sound file for a word and return the sound field value and media files list."""
         sound_field_value = ""
         media_files: List[str] = []
@@ -75,7 +78,9 @@ class AnkiDeckManager:
                 sound_file_path = os.path.join(sound_files_dir, word.sound_file)
                 if os.path.exists(sound_file_path):
                     media_files.append(sound_file_path)
-                    sound_field_value = f"[sound:{word.sound_file}]"  # Anki format for sound
+                    sound_field_value = (
+                        f"[sound:{word.sound_file}]"  # Anki format for sound
+                    )
 
         return sound_field_value, media_files
 
@@ -116,7 +121,12 @@ class AnkiDeckManager:
         for word in words:
             note = Note(
                 model=self.model,
-                fields=[word.greek, word.english, f"[sound:{word.sound}]", " ".join(word.tags)],
+                fields=[
+                    word.greek,
+                    word.english,
+                    f"[sound:{word.sound}]",
+                    " ".join(word.tags),
+                ],
                 tags=word.tags,
             )
             deck.add_note(note)

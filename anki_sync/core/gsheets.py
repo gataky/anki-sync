@@ -1,12 +1,15 @@
 import os
-from typing import Any, Optional, List, Dict
-from .models import Word
-from googleapiclient.discovery import build
-from google.oauth2.service_account import Credentials
-from .word_processor import WordProcessor
-from .stats import Stats
+from typing import Any, Dict, List, Optional
+
 import pandas as pd
+from google.oauth2.service_account import Credentials
+from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
+
+from .models import Word
+from .stats import Stats
+from .word_processor import WordProcessor
+
 
 class GoogleSheetsManager:
     """Manages interactions with Google Sheets API and data processing.
@@ -51,13 +54,19 @@ class GoogleSheetsManager:
             print(
                 "Please ensure GOOGLE_APPLICATION_CREDENTIALS environment variable is set correctly,"
             )
-            print("or specify the service account JSON file path directly in gsheets.py.")
+            print(
+                "or specify the service account JSON file path directly in gsheets.py."
+            )
             return None
 
         return build("sheets", "v4", credentials=creds)
 
     def _write_guids_to_sheet(
-        self, sheet_api: Any, sheet_id: str, sheet_name: str, updates: List[Dict[str, Any]]
+        self,
+        sheet_api: Any,
+        sheet_id: str,
+        sheet_name: str,
+        updates: List[Dict[str, Any]],
     ):
         """Writes new GUIDs back to the Google Sheet using a batch update."""
         if not updates:
@@ -66,8 +75,10 @@ class GoogleSheetsManager:
         try:
             body = {"valueInputOption": "USER_ENTERED", "data": updates}
             sheet_api.values().batchUpdate(spreadsheetId=sheet_id, body=body).execute()
-        except Exception as e:
-            self.stats.errors["guid_update"] = self.stats.errors.get("guid_update", 0) + 1
+        except Exception:
+            self.stats.errors["guid_update"] = (
+                self.stats.errors.get("guid_update", 0) + 1
+            )
 
     def get_words_from_sheet(
         self, sheet_id: str, sheet_name: Optional[str] = None

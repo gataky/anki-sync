@@ -1,27 +1,29 @@
 import click
 
-from .core.gsheets import GoogleSheetsManager
 from .core.anki import AnkiDeckManager
-from .core.word_processor import WordProcessor
-from .core.synthesizers.audio_synthesizer import AudioSynthesizer
+from .core.gsheets import GoogleSheetsManager
 from .core.models import Word
 from .core.stats import Stats
+from .core.synthesizers.audio_synthesizer import AudioSynthesizer
+from .core.word_processor import WordProcessor
 
 
 @click.group()
 def main() -> None:
     """Anki-Sync: A CLI tool to synchronize words from Google Sheets to Anki.
-    
+
     This tool reads vocabulary data from a Google Sheet, processes it (including
     prepending articles and generating tags), optionally synthesizes audio for
     Greek words, and creates an Anki package (.apkg) file.
     """
-    pass
 
 
 @main.command()
 @click.option(
-    "--sheet-id", required=True, envvar="GOOGLE_SHEET_ID", help="The ID of the Google Sheet."
+    "--sheet-id",
+    required=True,
+    envvar="GOOGLE_SHEET_ID",
+    help="The ID of the Google Sheet.",
 )
 @click.option(
     "--sheet-name",
@@ -66,13 +68,13 @@ def sync(
     synthesizer: str,
 ) -> None:
     """Fetches words from Google Sheets and creates an Anki package.
-    
+
     This command:
     1. Reads vocabulary data from the specified Google Sheet
     2. Processes each row (adding articles, generating tags)
     3. Optionally synthesizes audio for Greek words
     4. Creates an Anki package (.apkg) file
-    
+
     All options can be set via environment variables or command-line arguments.
     Command-line arguments take precedence over environment variables.
     """
@@ -82,12 +84,12 @@ def sync(
         audio_synthesizer = AudioSynthesizer(
             output_directory=anki_audio_directory,
             stats=stats,
-            synthesizer_type=synthesizer
+            synthesizer_type=synthesizer,
         )
         word_processor = WordProcessor(audio_synthesizer=audio_synthesizer)
         sheets_manager = GoogleSheetsManager(word_processor=word_processor, stats=stats)
         words: list[Word] = sheets_manager.get_words_from_sheet(sheet_id, sheet_name)
-        
+
         if not words:
             click.secho(
                 "No words fetched or an error occurred during fetching. Exiting.",
@@ -96,11 +98,13 @@ def sync(
             return
 
         anki_manager = AnkiDeckManager()
-        anki_manager.create_deck(words, deck_name, output_file, audio_directory=anki_audio_directory)
-        
+        anki_manager.create_deck(
+            words, deck_name, output_file, audio_directory=anki_audio_directory
+        )
+
         # Print statistics summary
         stats.print_summary()
-        
+
     except Exception as e:
         click.secho(
             f"An unexpected error occurred during the sync process: {e}",
@@ -108,6 +112,7 @@ def sync(
             err=True,
         )
         import traceback
+
         click.secho(
             traceback.format_exc(), fg="red", err=True
         )  # For more detailed debugging

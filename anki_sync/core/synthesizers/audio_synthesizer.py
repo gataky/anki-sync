@@ -1,9 +1,11 @@
 import os
-from typing import Optional, Literal
+from typing import Literal, Optional
+
+from ..stats import Stats
 from .base import BaseSynthesizer
 from .elevenlabs import ElevenLabsSynthesizer
 from .google import GoogleSynthesizer
-from ..stats import Stats
+
 
 class AudioSynthesizer:
     """Handles audio synthesis for words.
@@ -13,7 +15,12 @@ class AudioSynthesizer:
     statistics about the synthesis process and handles file management.
     """
 
-    def __init__(self, output_directory: str, stats: Stats, synthesizer_type: Literal["elevenlabs", "google"] = "elevenlabs"):
+    def __init__(
+        self,
+        output_directory: str,
+        stats: Stats,
+        synthesizer_type: Literal["elevenlabs", "google"] = "elevenlabs",
+    ):
         """Initialize the audio synthesizer.
 
         Args:
@@ -24,7 +31,9 @@ class AudioSynthesizer:
         self.output_directory = output_directory
         self.stats = stats
         self.synthesizer: BaseSynthesizer = (
-            ElevenLabsSynthesizer() if synthesizer_type == "elevenlabs" else GoogleSynthesizer()
+            ElevenLabsSynthesizer()
+            if synthesizer_type == "elevenlabs"
+            else GoogleSynthesizer()
         )
 
     def generate_sound_filename(self, word: str) -> Optional[str]:

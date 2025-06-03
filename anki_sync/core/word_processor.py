@@ -1,10 +1,12 @@
-import os
-from typing import Any, Optional, List, Dict, Tuple
-from .models import Word
-from anki_sync.utils.guid import generate_guid
-from .audio_synthesizer import AudioSynthesizer
-import re
+from typing import Any, Dict, List, Optional, Tuple
+
 import pandas as pd
+
+from anki_sync.utils.guid import generate_guid
+
+from .audio_synthesizer import AudioSynthesizer
+from .models import Word
+
 
 class WordProcessor:
     """Processes word data from Google Sheets into Word objects.
@@ -20,7 +22,7 @@ class WordProcessor:
         "masculine pl.": "οι",
         "feminine pl.": "οι",  # Note: feminine pl. is also οι
         "neuter pl.": "τα",
-        None: "", # If there is no gender then return an empty string.
+        None: "",  # If there is no gender then return an empty string.
     }
 
     def __init__(self, audio_synthesizer: AudioSynthesizer) -> None:
@@ -115,9 +117,13 @@ class WordProcessor:
                 processed_greek_word = f"{article} {processed_greek_word}"
 
         # Generate sound filename and synthesize if needed
-        sound_filename = self.audio_synthesizer.generate_sound_filename(original_greek_word)
+        sound_filename = self.audio_synthesizer.generate_sound_filename(
+            original_greek_word
+        )
         if sound_filename:
-            self.audio_synthesizer.synthesize_if_needed(processed_greek_word, sound_filename)
+            self.audio_synthesizer.synthesize_if_needed(
+                processed_greek_word, sound_filename
+            )
 
         # Process tags
         tags = []
@@ -131,5 +137,5 @@ class WordProcessor:
             sound=sound_filename or "",
             tags=tags,
             word_class=row.get("Class", ""),
-            gender=row.get("Gender")
+            gender=row.get("Gender"),
         )

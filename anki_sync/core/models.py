@@ -1,13 +1,15 @@
 from pydantic import BaseModel, Field
+
 from ..utils.guid import generate_guid
 
 
 class Word(BaseModel):
     """Represents a vocabulary word with its translations and metadata.
-    
+
     This class stores all information about a word, including its Greek and English
     translations, associated audio file, and tags for organization.
     """
+
     guid: str = Field(
         default_factory=lambda: generate_guid(10),
         description="Unique identifier for the word (10 characters). Auto-generated if not provided.",

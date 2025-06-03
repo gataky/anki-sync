@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Dict
 
+
 @dataclass
 class Stats:
     """Tracks statistics for the sync process.
@@ -8,6 +9,7 @@ class Stats:
     This class collects and tracks various metrics during the synchronization
     process, including line counts, audio generation, and error tracking.
     """
+
     total_lines_read: int = 0
     total_lines_processed: int = 0
     new_lines_processed: int = 0

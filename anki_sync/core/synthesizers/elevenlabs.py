@@ -1,7 +1,9 @@
 import os
-from typing import Optional
-from .base import BaseSynthesizer
+
 from elevenlabs.client import ElevenLabs
+
+from .base import BaseSynthesizer
+
 
 class ElevenLabsSynthesizer(BaseSynthesizer):
     """ElevenLabs text-to-speech synthesizer implementation.
