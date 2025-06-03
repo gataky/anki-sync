@@ -78,7 +78,7 @@ class WordProcessor:
         gender_tag_value = str(original_gender_from_sheet or "").strip()
         if gender_tag_value:
             gender_base_tag = gender_tag_value.split(" ")[0]
-            tags_list.append(f"class::{gender_base_tag}".replace(" ", "\u00a0"))
+            tags_list.append(f"gender::{gender_base_tag}".replace(" ", "\u00a0"))
 
         current_hierarchy_parts = []
         for cell_content_raw in hierarchical_tag_cells:
@@ -97,7 +97,8 @@ class WordProcessor:
                 - Greek: The Greek word
                 - English: The English translation
                 - Gender: Optional gender to determine article
-                - Tags: Optional comma-separated tags
+                - Class: Optional word class
+                - Category and onwards: Hierarchical tags
 
         Returns:
             A Word object if the row contains valid data, None otherwise
@@ -125,13 +126,18 @@ class WordProcessor:
                 processed_greek_word, sound_filename
             )
 
-        # Process tags
-        tags = []
-        if row.get("Tags"):
-            tags.extend(tag.strip() for tag in row["Tags"].split(",") if tag.strip())
-        tags.append("anki-sync")  # Add default tag
+        # Process tags using hierarchical tag system
+        # Get all columns from Category onwards
+        category_index = row.index.get_loc("Category") if "Category" in row.index else -1
+        hierarchical_tag_cells = row.iloc[category_index:].tolist() if category_index >= 0 else []
 
-        return Word(
+        tags = self._compile_tags_for_word(
+            row.get("Class"),
+            row.get("Gender"),
+            hierarchical_tag_cells,
+        )
+
+        word = Word(
             greek=processed_greek_word,
             english=row["English"].strip(),
             sound=sound_filename or "",
@@ -139,3 +145,5 @@ class WordProcessor:
             word_class=row.get("Class", ""),
             gender=row.get("Gender"),
         )
+        print(word)
+        return word

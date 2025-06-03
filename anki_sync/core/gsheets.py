@@ -80,6 +80,39 @@ class GoogleSheetsManager:
                 self.stats.errors.get("guid_update", 0) + 1
             )
 
+    def get_sheet_data(self, sheet_id: str, sheet_name: Optional[str] = None) -> pd.DataFrame:
+        """Fetch and process words from a Google Sheet.
+
+        Args:
+            sheet_id: The ID of the Google Sheet to fetch data from
+            sheet_name: Optional name of the specific sheet/tab to read from
+        """
+        # Get the sheet data
+        result = (
+            self.service.spreadsheets()
+            .values()
+            .get(spreadsheetId=sheet_id, range=sheet_name)
+            .execute()
+        )
+        values = result.get("values", [])
+
+        if not values:
+            print("No data found in the sheet.")
+            return pd.DataFrame()
+
+        # Convert to DataFrame for easier processing
+        df = pd.DataFrame(values[1:], columns=values[0])
+
+        # Find the Category column index
+        category_col = "Category"
+        if category_col in df.columns:
+            category_idx = df.columns.get_loc(category_col)
+            # Convert all columns from Category onwards to strings, replacing None with empty string
+            tag_columns = df.columns[category_idx:]
+            df[tag_columns] = df[tag_columns].fillna("").astype(str)
+
+        return df
+
     def get_words_from_sheet(
         self, sheet_id: str, sheet_name: Optional[str] = None
     ) -> List[Word]:
@@ -96,21 +129,7 @@ class GoogleSheetsManager:
             Exception: If there's an error fetching or processing the data
         """
         try:
-            # Get the sheet data
-            result = (
-                self.service.spreadsheets()
-                .values()
-                .get(spreadsheetId=sheet_id, range=sheet_name)
-                .execute()
-            )
-            values = result.get("values", [])
-
-            if not values:
-                print("No data found in the sheet.")
-                return []
-
-            # Convert to DataFrame for easier processing
-            df = pd.DataFrame(values[1:], columns=values[0])
+            df = self.get_sheet_data(sheet_id, sheet_name)
             self.stats.total_lines_read = len(df)
 
             # Process each row

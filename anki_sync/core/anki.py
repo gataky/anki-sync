@@ -43,22 +43,18 @@ class AnkiDeckManager:
 
     def __init__(self) -> None:
         """Initialize the AnkiDeckManager with the default note model."""
+        # Format fields with both name and ord
+        fields = [
+            {"name": field["name"], "ord": idx}
+            for idx, field in enumerate(self.ANKI_MODEL_FIELDS)
+        ]
+        
         self.model = Model(
-            1607392319,
-            "Greek Word Model",
-            fields=[
-                {"name": "Greek"},
-                {"name": "English"},
-                {"name": "Sound"},
-                {"name": "Tags"},
-            ],
-            templates=[
-                {
-                    "name": "Card 1",
-                    "qfmt": "{{Greek}}<br>{{Sound}}",
-                    "afmt": '{{FrontSide}}<hr id="answer">{{English}}',
-                }
-            ],
+            self.ANKI_MODEL_ID,
+            self.ANKI_MODEL_NAME,
+            fields=fields,
+            templates=self.ANKI_MODEL_TEMPLATES,
+            css=self.ANKI_MODEL_CSS,
         )
 
     def _create_deck(self, deck_name: str) -> Deck:
@@ -73,24 +69,22 @@ class AnkiDeckManager:
         sound_field_value = ""
         media_files: List[str] = []
 
-        if word.sound_file:
+        if word.sound:
             if sound_files_dir:
-                sound_file_path = os.path.join(sound_files_dir, word.sound_file)
+                sound_file_path = os.path.join(sound_files_dir, word.sound)
                 if os.path.exists(sound_file_path):
                     media_files.append(sound_file_path)
-                    sound_field_value = (
-                        f"[sound:{word.sound_file}]"  # Anki format for sound
-                    )
+                    sound_field_value = f"[sound:{word.sound}]"  # Anki format for sound
 
         return sound_field_value, media_files
 
     def _create_note(self, word: Word, sound_field_value: str) -> Note:
         """Creates an Anki note for a word."""
         note_fields = [
-            word.guid,
+            # word.guid,
             word.english,
             word.greek,
-            word.word_class,
+            word.word_class or "",
             word.gender or "",
             sound_field_value,
         ]
@@ -116,30 +110,19 @@ class AnkiDeckManager:
             output_file: Path where the .apkg file will be saved
             audio_directory: Optional path to directory containing sound files
         """
-        deck = Deck(2059400110, deck_name)
+        deck = self._create_deck(deck_name)
+        media_files = []
 
         for word in words:
-            note = Note(
-                model=self.model,
-                fields=[
-                    word.greek,
-                    word.english,
-                    f"[sound:{word.sound}]",
-                    " ".join(word.tags),
-                ],
-                tags=word.tags,
-            )
+            # Process sound file and get media files
+            sound_field_value, word_media_files = self._process_sound_file(word, audio_directory)
+            media_files.extend(word_media_files)
+
+            # Create note using the helper method
+            note = self._create_note(word, sound_field_value)
             deck.add_note(note)
 
-        # Handle media files
-        media_files = []
-        if audio_directory:
-            for word in words:
-                if word.sound:
-                    sound_path = os.path.join(audio_directory, word.sound)
-                    if os.path.exists(sound_path):
-                        media_files.append(sound_path)
-
+        # Create and write the package
         package = Package(deck)
         if media_files:
             package.media_files = media_files
