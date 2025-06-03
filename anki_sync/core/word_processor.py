@@ -3,9 +3,15 @@ from typing import Any, Optional, List, Dict, Tuple
 from .models import Word
 from anki_sync.utils.guid import generate_guid
 from .audio_synthesizer import AudioSynthesizer
+import re
+import pandas as pd
 
 class WordProcessor:
-    """Handles processing and transformation of word data."""
+    """Processes word data from Google Sheets into Word objects.
+
+    This class handles the processing of raw word data from Google Sheets,
+    including article handling, tag generation, and audio synthesis.
+    """
 
     GENDER_TO_ARTICLE_MAP = {
         "masculine": "ο",
@@ -17,11 +23,11 @@ class WordProcessor:
         None: "", # If there is no gender then return an empty string.
     }
 
-    def __init__(self, audio_synthesizer: AudioSynthesizer):
-        """Initialize the word processor.
+    def __init__(self, audio_synthesizer: AudioSynthesizer) -> None:
+        """Initialize the WordProcessor with required dependencies.
 
         Args:
-            audio_synthesizer: The AudioSynthesizer instance to use for audio synthesis
+            audio_synthesizer: Instance of AudioSynthesizer for handling audio generation
         """
         self.audio_synthesizer = audio_synthesizer
 
@@ -81,52 +87,49 @@ class WordProcessor:
             tags_list.append("::".join(current_hierarchy_parts))
         return sorted(list(set(tags_list)))
 
-    def process_row(
-        self, padded_row: List[Any], row_idx: int, sheet_name: str
-    ) -> Tuple[Optional[Dict[str, Any]], Optional[Dict[str, Any]]]:
-        """Processes a single row of data into a Word object and any necessary updates."""
-        guid_to_use, guid_update_item = self._process_guid_for_row(
-            padded_row[0], row_idx, sheet_name
-        )
+    def process_row(self, row: pd.Series) -> Optional[Word]:
+        """Process a row of data from the Google Sheet into a Word object.
 
-        raw_english = padded_row[1]
-        original_greek_word = str(padded_row[2] or "").strip()
-        raw_class = padded_row[3]
-        original_gender_from_sheet = padded_row[4]
+        Args:
+            row: A pandas Series containing the row data with columns:
+                - Greek: The Greek word
+                - English: The English translation
+                - Gender: Optional gender to determine article
+                - Tags: Optional comma-separated tags
 
-        gender_string_for_article = str(original_gender_from_sheet or "").strip().lower()
-        processed_greek_word = self._prefix_article_to_greek_word(
-            original_greek_word, gender_string_for_article
-        )
+        Returns:
+            A Word object if the row contains valid data, None otherwise
+        """
+        # Skip if no Greek word
+        if not row.get("Greek"):
+            return None
 
-        # Handle audio synthesis
+        original_greek_word = row["Greek"].strip()
+        processed_greek_word = original_greek_word
+
+        # Handle article based on gender
+        if row.get("Gender"):
+            gender = row["Gender"].strip().lower()
+            article = self.GENDER_TO_ARTICLE_MAP.get(gender, "")
+            if article and not processed_greek_word.startswith(article):
+                processed_greek_word = f"{article} {processed_greek_word}"
+
+        # Generate sound filename and synthesize if needed
         sound_filename = self.audio_synthesizer.generate_sound_filename(original_greek_word)
         if sound_filename:
             self.audio_synthesizer.synthesize_if_needed(processed_greek_word, sound_filename)
 
-        hierarchical_tag_cells = padded_row[5:]
-        tags = self._compile_tags_for_word(
-            raw_class, original_gender_from_sheet, hierarchical_tag_cells
+        # Process tags
+        tags = []
+        if row.get("Tags"):
+            tags.extend(tag.strip() for tag in row["Tags"].split(",") if tag.strip())
+        tags.append("anki-sync")  # Add default tag
+
+        return Word(
+            greek=processed_greek_word,
+            english=row["English"].strip(),
+            sound=sound_filename or "",
+            tags=tags,
+            word_class=row.get("Class", ""),
+            gender=row.get("Gender")
         )
-
-        word_args = {
-            "guid": guid_to_use,
-            "english": raw_english or "",
-            "greek": processed_greek_word,
-            "word_class": raw_class or "",
-            "gender": original_gender_from_sheet,
-            "sound_file": sound_filename,
-            "tags": tags,
-        }
-
-        if (
-            not word_args["english"]
-            or not original_greek_word
-            or not word_args["word_class"]
-        ):
-            print(
-                f"Skipping malformed row {row_idx + 2} (Sheet row): Missing essential data (English, Greek, or Class). Content: {padded_row[:6]}"
-            )
-            return None, guid_update_item
-
-        return word_args, guid_update_item

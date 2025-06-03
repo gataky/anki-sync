@@ -6,14 +6,19 @@ from .google import GoogleSynthesizer
 from ..stats import Stats
 
 class AudioSynthesizer:
-    """Handles audio synthesis for words."""
+    """Handles audio synthesis for words.
+
+    This class manages the synthesis of audio files for words, using either
+    ElevenLabs or Google Cloud TTS as the backend synthesizer. It tracks
+    statistics about the synthesis process and handles file management.
+    """
 
     def __init__(self, output_directory: str, stats: Stats, synthesizer_type: Literal["elevenlabs", "google"] = "elevenlabs"):
         """Initialize the audio synthesizer.
 
         Args:
             output_directory: Directory where sound files will be stored
-            stats: Stats instance to track audio generation
+            stats: Stats instance to track audio generation statistics
             synthesizer_type: Type of synthesizer to use ("elevenlabs" or "google")
         """
         self.output_directory = output_directory
@@ -23,7 +28,14 @@ class AudioSynthesizer:
         )
 
     def generate_sound_filename(self, word: str) -> Optional[str]:
-        """Generates the sound filename for a word."""
+        """Generates the sound filename for a word.
+
+        Args:
+            word: The word to generate a filename for
+
+        Returns:
+            The filename as "{word}.mp3" if word is not empty, None otherwise
+        """
         if word:
             return f"{word}.mp3"
         return None
@@ -34,6 +46,11 @@ class AudioSynthesizer:
         Args:
             word: The word to synthesize audio for
             sound_filename: The filename to save the audio as
+
+        This method will:
+        1. Check if the audio file already exists
+        2. If not, synthesize it using the configured synthesizer
+        3. Track success/failure in the stats object
         """
         if not (word and sound_filename and self.output_directory):
             return
@@ -41,7 +58,10 @@ class AudioSynthesizer:
         full_sound_path = os.path.join(self.output_directory, sound_filename)
         if not os.path.exists(full_sound_path):
             try:
-                # self.synthesizer.synthesize(word, self.output_directory)
+                self.synthesizer.synthesize(word, self.output_directory)
                 self.stats.audio_files_generated += 1
+                print(f"generating new audio {word}")
             except Exception as e:
-                self.stats.errors["audio_synthesis"] = self.stats.errors.get("audio_synthesis", 0) + 1
+                raise e
+        else:
+            print(f"audio exists for {word}")

@@ -41,7 +41,7 @@ class AudioSynthesizer:
         full_sound_path = os.path.join(self.output_directory, sound_filename)
         if not os.path.exists(full_sound_path):
             try:
-                # self.synthesizer.synthesize(word, self.output_directory)
+                self.synthesizer.synthesize(word, self.output_directory)
                 self.stats.audio_files_generated += 1
             except Exception as e:
                 self.stats.errors["audio_synthesis"] = self.stats.errors.get("audio_synthesis", 0) + 1
