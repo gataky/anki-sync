@@ -103,6 +103,7 @@ class WordProcessor:
         Returns:
             A Word object if the row contains valid data, None otherwise
         """
+
         # Skip if no Greek word
         if not row.get("Greek"):
             return None

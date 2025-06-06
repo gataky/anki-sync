@@ -48,7 +48,7 @@ class AnkiDeckManager:
             {"name": field["name"], "ord": idx}
             for idx, field in enumerate(self.ANKI_MODEL_FIELDS)
         ]
-        
+
         self.model = Model(
             self.ANKI_MODEL_ID,
             self.ANKI_MODEL_NAME,
@@ -81,7 +81,7 @@ class AnkiDeckManager:
     def _create_note(self, word: Word, sound_field_value: str) -> Note:
         """Creates an Anki note for a word."""
         note_fields = [
-            # word.guid,
+            word.guid,
             word.english,
             word.greek,
             word.word_class or "",
