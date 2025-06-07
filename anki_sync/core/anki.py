@@ -4,7 +4,7 @@ from typing import List, Optional
 
 from genanki import Deck, Model, Note, Package
 
-from .models import Word
+from .models import Word, Verb # Added Verb
 
 
 class AnkiDeckManager:
@@ -15,10 +15,10 @@ class AnkiDeckManager:
     associated media files.
     """
 
-    # Define a simple Anki note model
-    ANKI_MODEL_ID = 1607392319  # Randomly generated ID, keep this consistent
-    ANKI_MODEL_NAME = "Anik-Sync Basic (Eng-Gr with Sound)"
-    ANKI_MODEL_FIELDS = [
+    # --- Word Model Definition ---
+    ANKI_WORD_MODEL_ID = 1607392319  # Keep this consistent for words
+    ANKI_WORD_MODEL_NAME = "Anki-Sync Basic (Eng-Gr with Sound)"
+    ANKI_WORD_MODEL_FIELDS = [
         {"name": "GUID"},
         {"name": "English"},
         {"name": "Greek"},
@@ -26,7 +26,7 @@ class AnkiDeckManager:
         {"name": "Gender"},
         {"name": "Sound"},  # For the sound file
     ]
-    ANKI_MODEL_TEMPLATES = [
+    ANKI_WORD_MODEL_TEMPLATES = [
         {
             "name": "Card 1 (English to Greek)",
             "qfmt": "{{English}}",
@@ -39,22 +39,85 @@ class AnkiDeckManager:
         },
     ]
 
-    ANKI_MODEL_CSS = ".card { font-family: arial; font-size: 20px; text-align: center; color: black; background-color: white; } .note_type { font-size:0.8em; color:grey; }"
+    # --- Verb Model Definition ---
+    ANKI_VERB_MODEL_ID = 1607392320  # New Randomly generated ID for verbs
+    ANKI_VERB_MODEL_NAME = "Anki-Sync Verb (Eng-Gr with Stems)"
+    # Updated fields based on new Verb model and sheet structure
+    ANKI_VERB_MODEL_FIELDS = [
+        {"name": "GUID"},
+        {"name": "English"},
+        {"name": "Greek"}, # Main citation form
+        {"name": "Group"},
+        {"name": "Present Tense"},
+        {"name": "Past Simple"},
+        {"name": "Past Continuous"},
+        {"name": "Future Continuous"},
+        {"name": "Future Simple"},
+        {"name": "Sound"},
+    ]
+    # Updated template to include a table for tenses
+    ANKI_VERB_MODEL_TEMPLATES = [
+        {
+            "name": "Card 1 (English to Greek Verb)",
+            "qfmt": "{{English}}",
+            "afmt": '''{{FrontSide}}
+<hr id="answer">
+{{Greek}} {{Sound}}<br><br>
+<table style="text-align: left; margin-left: auto; margin-right: auto; border-collapse: collapse; color: black;">
+  {{#Past Simple}}<tr style="background-color: #ffe598; color: black; border-bottom: 1px solid #eee;"><td style="padding: 5px 10px 5px 0;">Past Simple:</td><td style="padding: 5px 0;">{{Past Simple}}</td></tr>{{/Past Simple}}
+  {{#Past Continuous}}<tr style="background-color: #fff2cc; color: black; border-bottom: 1px solid #eee;"><td style="padding: 5px 10px 5px 0;">Past Continuous:</td><td style="padding: 5px 0;">{{Past Continuous}}</td></tr>{{/Past Continuous}}
+  {{#Present Tense}}<tr style="border-bottom: 1px solid #eee; color: white"><td style="padding: 5px 10px 5px 0;">Present:</td><td style="padding: 5px 0;">{{Present Tense}}</td></tr>{{/Present Tense}}
+  {{#Future Continuous}}<tr style="background-color: #c9daf8; color: black;"><td style="padding: 5px 10px 5px 0;">Future Continuous:</td><td style="padding: 5px 0;">{{Future Continuous}}</td></tr>{{/Future Continuous}}
+  {{#Future Simple}}<tr style="background-color: #a4c2f4; color: black; border-bottom: 1px solid #eee;"><td style="padding: 5px 10px 5px 0;">Future Simple:</td><td style="padding: 5px 0;">{{Future Simple}}</td></tr>{{/Future Simple}}
+</table>
+<br><small>{{#Group}}Group: {{Group}}{{/Group}}</small>''',
+        },
+        {
+            "name": "Card 2 (Greek Verb to English)",
+            "qfmt": "{{Greek}}<br>{{Sound}}",
+            "afmt": '''{{FrontSide}}
+<hr id="answer">
+{{English}}<br><br>
+<table style="text-align: left; margin-left: auto; margin-right: auto; border-collapse: collapse; color: black;">
+  {{#Past Simple}}<tr style="background-color: #ffe598; color: black; border-bottom: 1px solid #eee;"><td style="padding: 5px 10px 5px 0;">Past Simple:</td><td style="padding: 5px 0;">{{Past Simple}}</td></tr>{{/Past Simple}}
+  {{#Past Continuous}}<tr style="background-color: #fff2cc; color: black; border-bottom: 1px solid #eee;"><td style="padding: 5px 10px 5px 0;">Past Continuous:</td><td style="padding: 5px 0;">{{Past Continuous}}</td></tr>{{/Past Continuous}}
+  {{#Present Tense}}<tr style="border-bottom: 1px solid #eee; color: white"><td style="padding: 5px 10px 5px 0;">Present:</td><td style="padding: 5px 0;">{{Present Tense}}</td></tr>{{/Present Tense}}
+  {{#Future Continuous}}<tr style="background-color: #c9daf8; color: black;"><td style="padding: 5px 10px 5px 0;">Future Continuous:</td><td style="padding: 5px 0;">{{Future Continuous}}</td></tr>{{/Future Continuous}}
+  {{#Future Simple}}<tr style="background-color: #a4c2f4; color: black; border-bottom: 1px solid #eee;"><td style="padding: 5px 10px 5px 0;">Future Simple:</td><td style="padding: 5px 0;">{{Future Simple}}</td></tr>{{/Future Simple}}
+</table>
+<br><small>{{#Group}}Group: {{Group}}{{/Group}}</small>''',
+        },
+    ]
+
+    # Shared CSS or define ANKI_VERB_MODEL_CSS if different
+    ANKI_SHARED_CSS = ".card { font-family: arial; font-size: 20px; text-align: center; color: black; background-color: white; } .note_type { font-size:0.8em; color:grey; }"
 
     def __init__(self) -> None:
-        """Initialize the AnkiDeckManager with the default note model."""
-        # Format fields with both name and ord
-        fields = [
+        """Initialize the AnkiDeckManager with note models."""
+        # Word Model
+        word_model_fields = [
             {"name": field["name"], "ord": idx}
-            for idx, field in enumerate(self.ANKI_MODEL_FIELDS)
+            for idx, field in enumerate(self.ANKI_WORD_MODEL_FIELDS)
         ]
+        self.word_model = Model(
+            self.ANKI_WORD_MODEL_ID,
+            self.ANKI_WORD_MODEL_NAME,
+            fields=word_model_fields,
+            templates=self.ANKI_WORD_MODEL_TEMPLATES,
+            css=self.ANKI_SHARED_CSS,
+        )
 
-        self.model = Model(
-            self.ANKI_MODEL_ID,
-            self.ANKI_MODEL_NAME,
-            fields=fields,
-            templates=self.ANKI_MODEL_TEMPLATES,
-            css=self.ANKI_MODEL_CSS,
+        # Verb Model
+        verb_model_fields = [
+            {"name": field["name"], "ord": idx}
+            for idx, field in enumerate(self.ANKI_VERB_MODEL_FIELDS)
+        ]
+        self.verb_model = Model(
+            self.ANKI_VERB_MODEL_ID,
+            self.ANKI_VERB_MODEL_NAME,
+            fields=verb_model_fields,
+            templates=self.ANKI_VERB_MODEL_TEMPLATES,
+            css=self.ANKI_SHARED_CSS,
         )
 
     def _create_deck(self, deck_name: str) -> Deck:
@@ -78,8 +141,8 @@ class AnkiDeckManager:
 
         return sound_field_value, media_files
 
-    def _create_note(self, word: Word, sound_field_value: str) -> Note:
-        """Creates an Anki note for a word."""
+    def _create_word_note(self, word: Word, sound_field_value: str) -> Note:
+        """Creates an Anki note for a Word object."""
         note_fields = [
             word.guid,
             word.english,
@@ -89,13 +152,35 @@ class AnkiDeckManager:
             sound_field_value,
         ]
         return Note(
-            model=self.model,
+            model=self.word_model,
             fields=note_fields,
             tags=word.tags,
             guid=word.guid,  # Explicitly set the note's GUID
         )
 
-    def create_deck(
+    def _create_verb_note(self, verb: Verb, sound_field_value: str) -> Note:
+        """Creates an Anki note for a Verb object."""
+        note_fields = [
+            verb.guid,
+            verb.english,
+            verb.greek_citation, # Main Greek form
+            verb.group or "",
+            verb.present_tense or "",
+            verb.past_simple or "",
+            verb.past_continuous or "",
+            verb.future_continuous or "",
+            verb.future_simple or "",
+            sound_field_value,
+        ]
+        return Note(
+            model=self.verb_model,
+            fields=note_fields,
+            tags=verb.tags,
+            guid=verb.guid, # Explicitly set the note's GUID
+        )
+
+
+    def create_word_deck(
         self,
         words: List[Word],
         deck_name: str,
@@ -119,10 +204,40 @@ class AnkiDeckManager:
             media_files.extend(word_media_files)
 
             # Create note using the helper method
-            note = self._create_note(word, sound_field_value)
+            note = self._create_word_note(word, sound_field_value)
             deck.add_note(note)
 
         # Create and write the package
+        package = Package(deck)
+        if media_files:
+            package.media_files = media_files
+        package.write_to_file(output_file)
+
+    def create_verb_deck(
+        self,
+        verbs: List[Verb],
+        deck_name: str,
+        output_file: str,
+        audio_directory: Optional[str] = None,
+    ) -> None:
+        """Create an Anki deck from a list of verbs and save it as a package.
+
+        Args:
+            verbs: List of Verb objects to include in the deck
+            deck_name: Name of the Anki deck to create
+            output_file: Path where the .apkg file will be saved
+            audio_directory: Optional path to directory containing sound files
+        """
+        deck = self._create_deck(deck_name)
+        media_files = []
+
+        for verb in verbs:
+            sound_field_value, verb_media_files = self._process_sound_file(verb, audio_directory)
+            media_files.extend(verb_media_files)
+
+            note = self._create_verb_note(verb, sound_field_value)
+            deck.add_note(note)
+
         package = Package(deck)
         if media_files:
             package.media_files = media_files

@@ -5,29 +5,29 @@ import pandas as pd
 from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
-
-from .models import Word
+from typing import Union # For Union type hint
+from .models import Word, Verb # Added Verb
 from .stats import Stats
-from .word_processor import WordProcessor
+# from .word_processor import WordProcessor # Will use a generic processor type
 
 
 class GoogleSheetsManager:
     """Manages interactions with Google Sheets API and data processing.
 
     This class handles authentication, fetching data from Google Sheets,
-    and processing the data into Word objects using a WordProcessor.
+    and processing the data into items (like Word or Verb objects) using a provided processor.
     """
 
     SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 
-    def __init__(self, word_processor: WordProcessor, stats: Stats) -> None:
+    def __init__(self, item_processor: Any, stats: Stats) -> None:
         """Initialize the GoogleSheetsManager with required dependencies.
 
         Args:
             word_processor: Instance of WordProcessor for processing sheet data
             stats: Instance of Stats for tracking processing statistics
         """
-        self.word_processor = word_processor
+        self.item_processor = item_processor # Renamed from word_processor
         self.stats = stats
         self.service = self._get_sheets_service()
 
@@ -113,39 +113,64 @@ class GoogleSheetsManager:
 
         return df
 
-    def get_words_from_sheet(
+    def get_items_from_sheet(
         self, sheet_id: str, sheet_name: Optional[str] = None
-    ) -> List[Word]:
-        """Fetch and process words from a Google Sheet.
+    ) -> List[Union[Word, Verb, Any]]: # Adjusted return type
+        """Fetch and process items (words, verbs, etc.) from a Google Sheet.
 
         Args:
             sheet_id: The ID of the Google Sheet to fetch data from
             sheet_name: Optional name of the specific sheet/tab to read from
 
         Returns:
-            List of processed Word objects
+            List of processed item objects (e.g., Word, Verb)
 
         Raises:
             Exception: If there's an error fetching or processing the data
         """
         try:
-            df = self.get_sheet_data(sheet_id, sheet_name)
+            # Ensure sheet_name is provided for GUID updates, default if necessary
+            actual_sheet_name = sheet_name
+            if not actual_sheet_name:
+                # Attempt to get the first sheet's name if not provided,
+                # as _write_guids_to_sheet needs a specific sheet name.
+                # This might require an additional API call if not easily determined.
+                # For simplicity, we'll assume sheet_name is usually provided when GUIDs are managed.
+                # If sheet_name is None, GUID writing might target an unexpected sheet or fail.
+                # A robust solution would fetch sheet metadata to get the first sheet name if None.
+                print("Warning: sheet_name not provided to get_items_from_sheet. GUID updates might be affected.")
+                # For now, let's pass it as None and let _process_guid_for_row handle it if it can.
+                # Or, require sheet_name if GUID updates are expected.
+                # Let's assume sheet_name is the actual name used in ranges like 'Sheet1'.
+                pass # actual_sheet_name remains as passed
+
+            df = self.get_sheet_data(sheet_id, actual_sheet_name)
             self.stats.total_lines_read = len(df)
 
-            # Process each row
-            words = []
-            for _, row in df.iterrows():
+            items = []
+            guid_updates_batch = []
+            for idx, row in df.iterrows(): # idx is the 0-based DataFrame index
                 try:
-                    word = self.word_processor.process_row(row)
-                    if word:
-                        words.append(word)
+                    item, guid_update = self.item_processor.process_row(row, actual_sheet_name or "Sheet1", idx)
+                    if item:
+                        items.append(item)
                         self.stats.total_lines_processed += 1
+                    if guid_update:
+                        guid_updates_batch.append(guid_update)
                 except Exception as e:
                     print(e)
                     self.stats.errors.append(f"Error processing row: {str(e)}")
                     continue
 
-            return words
+            if guid_updates_batch and actual_sheet_name: # Ensure sheet_name is valid for writing
+                self._write_guids_to_sheet(
+                    self.service.spreadsheets(), sheet_id, actual_sheet_name, guid_updates_batch
+                )
+            elif guid_updates_batch and not actual_sheet_name:
+                print("Warning: GUID updates were generated but sheet_name was not available to write them back.")
+
+
+            return items
 
         except HttpError as error:
             raise Exception(f"An error occurred while fetching data: {error}")

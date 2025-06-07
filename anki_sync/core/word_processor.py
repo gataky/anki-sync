@@ -6,6 +6,7 @@ from anki_sync.utils.guid import generate_guid
 
 from .synthesizers.audio_synthesizer import AudioSynthesizer
 from .models import Word
+from .stats import Stats # Added Stats
 
 
 class WordProcessor:
@@ -25,13 +26,15 @@ class WordProcessor:
         None: "",  # If there is no gender then return an empty string.
     }
 
-    def __init__(self, audio_synthesizer: AudioSynthesizer) -> None:
+    def __init__(self, audio_synthesizer: AudioSynthesizer, stats: Stats) -> None:
         """Initialize the WordProcessor with required dependencies.
 
         Args:
             audio_synthesizer: Instance of AudioSynthesizer for handling audio generation
+            stats: Instance for tracking processing statistics.
         """
         self.audio_synthesizer = audio_synthesizer
+        self.stats = stats
 
     def _process_guid_for_row(
         self, guid_cell_value: Any, row_idx: int, sheet_name: str
@@ -46,6 +49,7 @@ class WordProcessor:
             print(
                 f"Info: Row {actual_sheet_row_num} in sheet '{sheet_name}' is missing GUID. Generated: {guid_to_use}"
             )
+            self.stats.new_lines_processed += 1
             guid_update_item = {
                 "range": f"{sheet_name}!A{actual_sheet_row_num}",
                 "values": [[guid_to_use]],
@@ -89,24 +93,37 @@ class WordProcessor:
             tags_list.append("::".join(current_hierarchy_parts))
         return sorted(list(set(tags_list)))
 
-    def process_row(self, row: pd.Series) -> Optional[Word]:
+    def process_row(
+        self, row: pd.Series, sheet_name: str, row_idx: int
+    ) -> Tuple[Optional[Word], Optional[Dict[str, Any]]]:
         """Process a row of data from the Google Sheet into a Word object.
 
         Args:
             row: A pandas Series containing the row data with columns:
+                - GUID: Optional unique identifier
                 - Greek: The Greek word
                 - English: The English translation
                 - Gender: Optional gender to determine article
                 - Class: Optional word class
                 - Category and onwards: Hierarchical tags
+            sheet_name: The name of the sheet being processed.
+            row_idx: The 0-based index of the row in the DataFrame.
 
         Returns:
-            A Word object if the row contains valid data, None otherwise
+            A tuple containing a Word object (or None) and an optional GUID update item.
         """
 
         # Skip if no Greek word
-        if not row.get("Greek"):
-            return None
+        if not row.get("Greek") or not row.get("English"):
+            return None, None
+
+        # Process GUID
+        # Assuming the GUID column is named 'GUID'. If it's different, adjust row.get("GUID_COLUMN_NAME")
+        guid_cell_value = row.get("GUID")
+        guid_to_use, guid_update_item = self._process_guid_for_row(
+            guid_cell_value, row_idx, sheet_name
+        )
+
 
         original_greek_word = row["Greek"].strip()
         processed_greek_word = original_greek_word
@@ -139,6 +156,7 @@ class WordProcessor:
         )
 
         word = Word(
+            guid=guid_to_use,
             greek=processed_greek_word,
             english=row["English"].strip(),
             sound=sound_filename or "",
@@ -146,5 +164,5 @@ class WordProcessor:
             word_class=row.get("Class", ""),
             gender=row.get("Gender"),
         )
-        print(word)
-        return word
+        # print(f"Processed Word: {word.greek}") # Optional for debugging
+        return word, guid_update_item
