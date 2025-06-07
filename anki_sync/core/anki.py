@@ -1,6 +1,6 @@
 import hashlib
 import os
-from typing import List, Optional
+from typing import List, Optional, Union, Any
 
 from genanki import Deck, Model, Note, Package
 
@@ -66,7 +66,7 @@ class AnkiDeckManager:
 <table style="text-align: left; margin-left: auto; margin-right: auto; border-collapse: collapse; color: black;">
   {{#Past Simple}}<tr style="background-color: #ffe598; color: black; border-bottom: 1px solid #eee;"><td style="padding: 5px 10px 5px 0;">Past Simple:</td><td style="padding: 5px 0;">{{Past Simple}}</td></tr>{{/Past Simple}}
   {{#Past Continuous}}<tr style="background-color: #fff2cc; color: black; border-bottom: 1px solid #eee;"><td style="padding: 5px 10px 5px 0;">Past Continuous:</td><td style="padding: 5px 0;">{{Past Continuous}}</td></tr>{{/Past Continuous}}
-  {{#Present Tense}}<tr style="border-bottom: 1px solid #eee; color: white"><td style="padding: 5px 10px 5px 0;">Present:</td><td style="padding: 5px 0;">{{Present Tense}}</td></tr>{{/Present Tense}}
+  {{#Present Tense}}<tr style="border-bottom: 1px solid #eee; color: white;"><td style="padding: 5px 10px 5px 0;">Present:</td><td style="padding: 5px 0;">{{Present Tense}}</td></tr>{{/Present Tense}}
   {{#Future Continuous}}<tr style="background-color: #c9daf8; color: black;"><td style="padding: 5px 10px 5px 0;">Future Continuous:</td><td style="padding: 5px 0;">{{Future Continuous}}</td></tr>{{/Future Continuous}}
   {{#Future Simple}}<tr style="background-color: #a4c2f4; color: black; border-bottom: 1px solid #eee;"><td style="padding: 5px 10px 5px 0;">Future Simple:</td><td style="padding: 5px 0;">{{Future Simple}}</td></tr>{{/Future Simple}}
 </table>
@@ -81,7 +81,7 @@ class AnkiDeckManager:
 <table style="text-align: left; margin-left: auto; margin-right: auto; border-collapse: collapse; color: black;">
   {{#Past Simple}}<tr style="background-color: #ffe598; color: black; border-bottom: 1px solid #eee;"><td style="padding: 5px 10px 5px 0;">Past Simple:</td><td style="padding: 5px 0;">{{Past Simple}}</td></tr>{{/Past Simple}}
   {{#Past Continuous}}<tr style="background-color: #fff2cc; color: black; border-bottom: 1px solid #eee;"><td style="padding: 5px 10px 5px 0;">Past Continuous:</td><td style="padding: 5px 0;">{{Past Continuous}}</td></tr>{{/Past Continuous}}
-  {{#Present Tense}}<tr style="border-bottom: 1px solid #eee; color: white"><td style="padding: 5px 10px 5px 0;">Present:</td><td style="padding: 5px 0;">{{Present Tense}}</td></tr>{{/Present Tense}}
+  {{#Present Tense}}<tr style="border-bottom: 1px solid #eee; color: white;"><td style="padding: 5px 10px 5px 0;">Present:</td><td style="padding: 5px 0;">{{Present Tense}}</td></tr>{{/Present Tense}}
   {{#Future Continuous}}<tr style="background-color: #c9daf8; color: black;"><td style="padding: 5px 10px 5px 0;">Future Continuous:</td><td style="padding: 5px 0;">{{Future Continuous}}</td></tr>{{/Future Continuous}}
   {{#Future Simple}}<tr style="background-color: #a4c2f4; color: black; border-bottom: 1px solid #eee;"><td style="padding: 5px 10px 5px 0;">Future Simple:</td><td style="padding: 5px 0;">{{Future Simple}}</td></tr>{{/Future Simple}}
 </table>
@@ -125,20 +125,19 @@ class AnkiDeckManager:
         deck_id = int(hashlib.md5(deck_name.encode("utf-8")).hexdigest(), 16) % (10**10)
         return Deck(deck_id, deck_name)
 
-    def _process_sound_file(
-        self, word: Word, sound_files_dir: Optional[str]
+    def _process_item_sound_file(
+        self, item: Union[Word, Verb], sound_files_dir: Optional[str]
     ) -> tuple[str, List[str]]:
-        """Process sound file for a word and return the sound field value and media files list."""
+        """Process sound file for an item (Word or Verb) and return the sound field value and media files list."""
         sound_field_value = ""
         media_files: List[str] = []
 
-        if word.sound:
+        if item.sound: # Both Word and Verb have a .sound attribute
             if sound_files_dir:
-                sound_file_path = os.path.join(sound_files_dir, word.sound)
+                sound_file_path = os.path.join(sound_files_dir, item.sound)
                 if os.path.exists(sound_file_path):
                     media_files.append(sound_file_path)
-                    sound_field_value = f"[sound:{word.sound}]"  # Anki format for sound
-
+                    sound_field_value = f"[sound:{item.sound}]"
         return sound_field_value, media_files
 
     def _create_word_note(self, word: Word, sound_field_value: str) -> Note:
@@ -200,7 +199,7 @@ class AnkiDeckManager:
 
         for word in words:
             # Process sound file and get media files
-            sound_field_value, word_media_files = self._process_sound_file(word, audio_directory)
+            sound_field_value, word_media_files = self._process_item_sound_file(word, audio_directory)
             media_files.extend(word_media_files)
 
             # Create note using the helper method
@@ -212,6 +211,46 @@ class AnkiDeckManager:
         if media_files:
             package.media_files = media_files
         package.write_to_file(output_file)
+
+    def create_combined_deck(
+        self,
+        deck_name: str,
+        output_file: str,
+        words: Optional[List[Word]] = None,
+        verbs: Optional[List[Verb]] = None,
+        audio_directory: Optional[str] = None,
+    ) -> None:
+        """
+        Creates a single Anki deck containing notes from different models (words and verbs).
+        """
+        deck = self._create_deck(deck_name)
+        # Models (self.word_model, self.verb_model) are automatically included in the package
+        # by genanki if notes using them are added to the deck.
+
+        media_files = []
+
+        if words:
+            for word_obj in words:
+                sound_field_value, item_media_files = self._process_item_sound_file(word_obj, audio_directory)
+                media_files.extend(item_media_files)
+                note = self._create_word_note(word_obj, sound_field_value)
+                deck.add_note(note)
+
+        if verbs:
+            for verb_obj in verbs:
+                sound_field_value, item_media_files = self._process_item_sound_file(verb_obj, audio_directory)
+                media_files.extend(item_media_files)
+                note = self._create_verb_note(verb_obj, sound_field_value)
+                deck.add_note(note)
+
+        package = Package(deck)
+        if media_files:
+            # Ensure media files are unique if some sounds happen to be identical
+            # though unlikely with current naming.
+            package.media_files = list(set(media_files))
+        package.write_to_file(output_file)
+
+
 
     def create_verb_deck(
         self,
@@ -232,7 +271,7 @@ class AnkiDeckManager:
         media_files = []
 
         for verb in verbs:
-            sound_field_value, verb_media_files = self._process_sound_file(verb, audio_directory)
+            sound_field_value, verb_media_files = self._process_item_sound_file(verb, audio_directory)
             media_files.extend(verb_media_files)
 
             note = self._create_verb_note(verb, sound_field_value)

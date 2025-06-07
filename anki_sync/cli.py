@@ -18,28 +18,22 @@ def main() -> None:
     """
 
 
-@main.command(name="sync-words")
+@main.command(name="sync")
 @click.option(
     "--sheet-id",
     required=True,
     envvar="GOOGLE_SHEET_ID",
-    help="The ID of the Google Sheet.",
-)
-@click.option(
-    "--sheet-name",
-    envvar="GOOGLE_SHEET_NAME",
-    show_default=True,
-    help="The name of the sheet/page containing the words.",
+    help="The ID of the Google Sheet containing 'Words' and 'Verbs' sheets.",
 )
 @click.option(
     "--deck-name",
     required=True,
-    envvar="ANKI_DECK_NAME",
-    help="The name of the Anki deck to create or update.",
+    envvar="ANKI_DECK_NAME", # Changed from ANKI_DECK_NAME_COMBINED
+    help="Name for the combined Anki deck.",
 )
 @click.option(
     "--output-file",
-    default="anki_sync_deck.apkg",
+    default="anki_combined_deck.apkg", # Changed default
     show_default=True,
     type=click.Path(dir_okay=False, writable=True, resolve_path=True),
     help="The path to save the generated Anki package (.apkg) file. Will be an absolute path.",
@@ -50,7 +44,7 @@ def main() -> None:
     type=click.Path(
         exists=True, file_okay=False, dir_okay=True, readable=True, resolve_path=True
     ),
-    help="Optional. Path to the directory containing sound files referenced in the sheet. If provided, sounds will be packaged.",
+    help="Optional. Path to the directory for storing/finding sound files.",
 )
 @click.option(
     "--synthesizer",
@@ -59,152 +53,72 @@ def main() -> None:
     show_default=True,
     help="The text-to-speech synthesizer to use for generating audio.",
 )
-def sync_words(
+def sync(
     sheet_id: str,
-    sheet_name: str,
     deck_name: str,
     output_file: str,
-    anki_audio_directory: str,
+    anki_audio_directory: str | None,
     synthesizer: str,
 ) -> None:
-    """Fetches vocabulary words from Google Sheets and creates an Anki package.
+    """Fetches words and verbs from a Google Sheet and creates a combined Anki package.
 
     This command:
-    1. Reads vocabulary data from the specified Google Sheet
-    2. Processes each row (adding articles, generating tags)
-    3. Optionally synthesizes audio for Greek words
-    4. Creates an Anki package (.apkg) file
+    1. Reads data from 'Words' and 'Verbs' sheets in the specified Google Sheet.
+    2. Processes items, generates tags, and synthesizes audio.
+    3. Creates a single Anki package (.apkg) file with both words and verbs.
 
     All options can be set via environment variables or command-line arguments.
     Command-line arguments take precedence over environment variables.
     """
+    WORDS_SHEET_NAME = "Words"
+    VERBS_SHEET_NAME = "Verbs"
     stats = Stats()
 
+    stats = Stats()
+    audio_synthesizer = AudioSynthesizer(
+        output_directory=anki_audio_directory,
+        stats=stats,
+        synthesizer_type=synthesizer,
+    )
+
+    words_data = []
     try:
-        audio_synthesizer = AudioSynthesizer(
-            output_directory=anki_audio_directory,
-            stats=stats,
-            synthesizer_type=synthesizer,
-        )
-        word_processor = WordProcessor(audio_synthesizer=audio_synthesizer, stats=stats) # Added stats
-        # Updated to use item_processor
-        sheets_manager = GoogleSheetsManager(item_processor=word_processor, stats=stats)
-        # get_words_from_sheet is now get_items_from_sheet
-        words: list[Word] = sheets_manager.get_items_from_sheet(sheet_id, sheet_name)
-
-        if not words:
-            click.secho(
-                "No words fetched or an error occurred during fetching. Exiting.",
-                fg="yellow",
-            )
-            return
-
-        anki_manager = AnkiDeckManager()
-        # create_deck is now create_word_deck
-        anki_manager.create_word_deck(
-            words, deck_name, output_file, audio_directory=anki_audio_directory # Corrected variable name
-        )
-
-        # Print statistics summary
-        stats.print_summary()
-
+        click.echo(f"Attempting to fetch words from sheet: '{WORDS_SHEET_NAME}'...")
+        word_processor = WordProcessor(audio_synthesizer=audio_synthesizer, stats=stats)
+        gsheets_manager_words = GoogleSheetsManager(item_processor=word_processor, stats=stats)
+        words_data = gsheets_manager_words.get_items_from_sheet(sheet_id, WORDS_SHEET_NAME)
+        click.echo(f"Fetched {len(words_data)} words from sheet '{WORDS_SHEET_NAME}'.")
     except Exception as e:
-        click.secho(
-            f"An unexpected error occurred during the sync process: {e}",
-            fg="red",
-            err=True,
-        )
-        import traceback
+        # GoogleSheetsManager.get_items_from_sheet already prints a warning if sheet_name is None
+        # or if HttpError occurs. We can add more specific handling here if needed.
+        click.secho(f"Could not fetch or process words from sheet '{WORDS_SHEET_NAME}'. Error: {e}", fg="yellow")
+        # words_data remains empty, process continues
 
-        click.secho(
-            traceback.format_exc(), fg="red", err=True
-        )  # For more detailed debugging
-
-
-@main.command(name="sync-verbs")
-@click.option(
-    "--sheet-id",
-    required=True,
-    envvar="GOOGLE_SHEET_ID", # Consider separate env var if needed
-    help="The ID of the Google Sheet containing verb data.",
-)
-@click.option(
-    "--sheet-name",
-    required=True, # Verb sheet name is usually specific
-    envvar="GOOGLE_SHEET_NAME_VERBS",
-    help="The name of the sheet/page containing the verbs.",
-)
-@click.option(
-    "--deck-name",
-    required=True,
-    envvar="ANKI_DECK_NAME_VERBS",
-    help="The name of the Anki deck to create for verbs.",
-)
-@click.option(
-    "--output-file",
-    default="anki_verbs_deck.apkg",
-    show_default=True,
-    type=click.Path(dir_okay=False, writable=True, resolve_path=True),
-    help="The path to save the generated Anki package (.apkg) file for verbs.",
-)
-@click.option(
-    "--anki-audio-directory",
-    envvar="ANKI_AUDIO_DIRECTORY", # Can share audio directory
-    type=click.Path(
-        exists=True, file_okay=False, dir_okay=True, readable=True, resolve_path=True
-    ),
-    help="Optional. Path to the directory for storing/finding sound files. If provided, sounds will be synthesized/packaged.",
-)
-@click.option(
-    "--synthesizer",
-    type=click.Choice(["elevenlabs", "google"]),
-    default="elevenlabs",
-    show_default=True,
-    help="The text-to-speech synthesizer to use for generating audio for verbs.",
-)
-def sync_verbs(
-    sheet_id: str,
-    sheet_name: str,
-    deck_name: str,
-    output_file: str,
-    anki_audio_directory: str,
-    synthesizer: str,
-) -> None:
-    """Fetches verbs from Google Sheets and creates an Anki package."""
-    stats = Stats()
-
+    verbs_data = []
     try:
-        audio_synthesizer = AudioSynthesizer(
-            output_directory=anki_audio_directory,
-            stats=stats,
-            synthesizer_type=synthesizer,
-        )
+        click.echo(f"Attempting to fetch verbs from sheet: '{VERBS_SHEET_NAME}'...")
         verb_processor = VerbProcessor(audio_synthesizer=audio_synthesizer, stats=stats)
-        sheets_manager = GoogleSheetsManager(item_processor=verb_processor, stats=stats)
-        verbs: list[Verb] = sheets_manager.get_items_from_sheet(sheet_id, sheet_name)
-
-        if not verbs:
-            click.secho(
-                "No verbs fetched or an error occurred during fetching. Exiting.",
-                fg="yellow",
-            )
-            return
-
-        anki_manager = AnkiDeckManager()
-        anki_manager.create_verb_deck(
-            verbs, deck_name, output_file, audio_directory=anki_audio_directory
-        )
-
-        stats.print_summary()
-
+        gsheets_manager_verbs = GoogleSheetsManager(item_processor=verb_processor, stats=stats)
+        verbs_data = gsheets_manager_verbs.get_items_from_sheet(sheet_id, VERBS_SHEET_NAME)
+        click.echo(f"Fetched {len(verbs_data)} verbs from sheet '{VERBS_SHEET_NAME}'.")
     except Exception as e:
-        click.secho(
-            f"An unexpected error occurred during the verb sync process: {e}",
-            fg="red",
-            err=True,
-        )
-        import traceback
-        click.secho(traceback.format_exc(), fg="red", err=True)
+        click.secho(f"Could not fetch or process verbs from sheet '{VERBS_SHEET_NAME}'. Error: {e}", fg="yellow")
+        # verbs_data remains empty, process continues
+
+    if not words_data and not verbs_data:
+        click.secho("No data fetched for either words or verbs. Exiting.", fg="yellow")
+        return
+
+    anki_manager = AnkiDeckManager()
+    anki_manager.create_combined_deck(
+        deck_name=deck_name,
+        output_file=output_file,
+        words=words_data if words_data else None,
+        verbs=verbs_data if verbs_data else None,
+        audio_directory=anki_audio_directory,
+    )
+    stats.print_summary() # Stats will be cumulative
+    click.secho(f"Combined deck '{deck_name}' created successfully at {output_file}", fg="green")
 
 if __name__ == "__main__":
     main()
