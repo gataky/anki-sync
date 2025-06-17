@@ -3,8 +3,10 @@ import os
 from typing import List, Optional, Union, Any
 
 from genanki import Deck, Model, Note, Package
+import pandas as pd
 
-from .models import Word, Verb # Added Verb
+from .models import Word, Verb, VerbConjugation
+from ..utils.guid import generate_guid
 
 
 class AnkiDeckManager:
@@ -40,52 +42,47 @@ class AnkiDeckManager:
     ]
 
     # --- Verb Model Definition ---
-    ANKI_VERB_MODEL_ID = 1607392320  # New Randomly generated ID for verbs
-    ANKI_VERB_MODEL_NAME = "Anki-Sync Verb (Eng-Gr with Stems)"
+    ANKI_VERB_MODEL_ID = 1607392321  # New Randomly generated ID for verbs
+    ANKI_VERB_MODEL_NAME = "Anki-Sync Verb (Eng-Gr with Sound)"
     # Updated fields based on new Verb model and sheet structure
     ANKI_VERB_MODEL_FIELDS = [
         {"name": "GUID"},
-        {"name": "English"},
         {"name": "Greek"}, # Main citation form
-        {"name": "Group"},
-        {"name": "Present Tense"},
-        {"name": "Past Simple"},
-        {"name": "Past Continuous"},
-        {"name": "Future Continuous"},
-        {"name": "Future Simple"},
+        {"name": "English"},
+        {"name": "Example"},
         {"name": "Sound"},
+        {"name": "SoundEx"},
+        {"name": "Tense"},
+        {"name": "Person"},
+        {"name": "Number"},
     ]
     # Updated template to include a table for tenses
     ANKI_VERB_MODEL_TEMPLATES = [
         {
             "name": "Card 1 (English to Greek Verb)",
-            "qfmt": "{{English}}",
-            "afmt": '''{{FrontSide}}
+            "qfmt": '''
+{{English}}
+<br><small>{{Tense}} {{Person}} person {{Number}}</small>
+''',
+            "afmt": '''
+{{FrontSide}}
 <hr id="answer">
-{{Greek}} {{Sound}}<br><br>
-<table style="text-align: left; margin-left: auto; margin-right: auto; border-collapse: collapse; color: black;">
-  {{#Past Simple}}<tr style="background-color: #ffe598; color: black; border-bottom: 1px solid #eee;"><td style="padding: 5px 10px 5px 0;">Past Simple:</td><td style="padding: 5px 0;">{{Past Simple}}</td></tr>{{/Past Simple}}
-  {{#Past Continuous}}<tr style="background-color: #fff2cc; color: black; border-bottom: 1px solid #eee;"><td style="padding: 5px 10px 5px 0;">Past Continuous:</td><td style="padding: 5px 0;">{{Past Continuous}}</td></tr>{{/Past Continuous}}
-  {{#Present Tense}}<tr style="border-bottom: 1px solid #eee; color: white;"><td style="padding: 5px 10px 5px 0;">Present:</td><td style="padding: 5px 0;">{{Present Tense}}</td></tr>{{/Present Tense}}
-  {{#Future Continuous}}<tr style="background-color: #c9daf8; color: black;"><td style="padding: 5px 10px 5px 0;">Future Continuous:</td><td style="padding: 5px 0;">{{Future Continuous}}</td></tr>{{/Future Continuous}}
-  {{#Future Simple}}<tr style="background-color: #a4c2f4; color: black; border-bottom: 1px solid #eee;"><td style="padding: 5px 10px 5px 0;">Future Simple:</td><td style="padding: 5px 0;">{{Future Simple}}</td></tr>{{/Future Simple}}
-</table>
-<br><small>{{#Group}}Group: {{Group}}{{/Group}}</small>''',
+{{Greek}} {{Sound}}<br>{{Example}} {{SoundEx}}
+''',
         },
+
+
         {
             "name": "Card 2 (Greek Verb to English)",
-            "qfmt": "{{Greek}}<br>{{Sound}}",
-            "afmt": '''{{FrontSide}}
+            "qfmt": '''
+{{Greek}} {{Sound}}<br>{{Example}} {{SoundEx}}
+<br><small>{{Tense}} {{Person}} person {{Number}}</small>
+''',
+            "afmt": '''
+{{FrontSide}}
 <hr id="answer">
-{{English}}<br><br>
-<table style="text-align: left; margin-left: auto; margin-right: auto; border-collapse: collapse; color: black;">
-  {{#Past Simple}}<tr style="background-color: #ffe598; color: black; border-bottom: 1px solid #eee;"><td style="padding: 5px 10px 5px 0;">Past Simple:</td><td style="padding: 5px 0;">{{Past Simple}}</td></tr>{{/Past Simple}}
-  {{#Past Continuous}}<tr style="background-color: #fff2cc; color: black; border-bottom: 1px solid #eee;"><td style="padding: 5px 10px 5px 0;">Past Continuous:</td><td style="padding: 5px 0;">{{Past Continuous}}</td></tr>{{/Past Continuous}}
-  {{#Present Tense}}<tr style="border-bottom: 1px solid #eee; color: white;"><td style="padding: 5px 10px 5px 0;">Present:</td><td style="padding: 5px 0;">{{Present Tense}}</td></tr>{{/Present Tense}}
-  {{#Future Continuous}}<tr style="background-color: #c9daf8; color: black;"><td style="padding: 5px 10px 5px 0;">Future Continuous:</td><td style="padding: 5px 0;">{{Future Continuous}}</td></tr>{{/Future Continuous}}
-  {{#Future Simple}}<tr style="background-color: #a4c2f4; color: black; border-bottom: 1px solid #eee;"><td style="padding: 5px 10px 5px 0;">Future Simple:</td><td style="padding: 5px 0;">{{Future Simple}}</td></tr>{{/Future Simple}}
-</table>
-<br><small>{{#Group}}Group: {{Group}}{{/Group}}</small>''',
+{{English}}
+''',
         },
     ]
 
@@ -157,28 +154,6 @@ class AnkiDeckManager:
             guid=word.guid,  # Explicitly set the note's GUID
         )
 
-    def _create_verb_note(self, verb: Verb, sound_field_value: str) -> Note:
-        """Creates an Anki note for a Verb object."""
-        note_fields = [
-            verb.guid,
-            verb.english,
-            verb.greek_citation, # Main Greek form
-            verb.group or "",
-            verb.present_tense or "",
-            verb.past_simple or "",
-            verb.past_continuous or "",
-            verb.future_continuous or "",
-            verb.future_simple or "",
-            sound_field_value,
-        ]
-        return Note(
-            model=self.verb_model,
-            fields=note_fields,
-            tags=verb.tags,
-            guid=verb.guid, # Explicitly set the note's GUID
-        )
-
-
     def create_word_deck(
         self,
         words: List[Word],
@@ -212,57 +187,17 @@ class AnkiDeckManager:
             package.media_files = media_files
         package.write_to_file(output_file)
 
-    def create_combined_deck(
-        self,
-        deck_name: str,
-        output_file: str,
-        words: Optional[List[Word]] = None,
-        verbs: Optional[List[Verb]] = None,
-        audio_directory: Optional[str] = None,
-    ) -> None:
-        """
-        Creates a single Anki deck containing notes from different models (words and verbs).
-        """
-        deck = self._create_deck(deck_name)
-        # Models (self.word_model, self.verb_model) are automatically included in the package
-        # by genanki if notes using them are added to the deck.
-
-        media_files = []
-
-        if words:
-            for word_obj in words:
-                sound_field_value, item_media_files = self._process_item_sound_file(word_obj, audio_directory)
-                media_files.extend(item_media_files)
-                note = self._create_word_note(word_obj, sound_field_value)
-                deck.add_note(note)
-
-        if verbs:
-            for verb_obj in verbs:
-                sound_field_value, item_media_files = self._process_item_sound_file(verb_obj, audio_directory)
-                media_files.extend(item_media_files)
-                note = self._create_verb_note(verb_obj, sound_field_value)
-                deck.add_note(note)
-
-        package = Package(deck)
-        if media_files:
-            # Ensure media files are unique if some sounds happen to be identical
-            # though unlikely with current naming.
-            package.media_files = list(set(media_files))
-        package.write_to_file(output_file)
-
-
-
     def create_verb_deck(
         self,
-        verbs: List[Verb],
+        verbs_df: pd.DataFrame,
         deck_name: str,
         output_file: str,
         audio_directory: Optional[str] = None,
     ) -> None:
-        """Create an Anki deck from a list of verbs and save it as a package.
+        """Create an Anki deck from a DataFrame of verb conjugations and save it as a package.
 
         Args:
-            verbs: List of Verb objects to include in the deck
+            verbs_df: DataFrame containing verb conjugation data
             deck_name: Name of the Anki deck to create
             output_file: Path where the .apkg file will be saved
             audio_directory: Optional path to directory containing sound files
@@ -270,14 +205,49 @@ class AnkiDeckManager:
         deck = self._create_deck(deck_name)
         media_files = []
 
-        for verb in verbs:
-            sound_field_value, verb_media_files = self._process_item_sound_file(verb, audio_directory)
-            media_files.extend(verb_media_files)
+        for _, row in verbs_df.iterrows():
+            # Create VerbConjugation object from row
+            verb_conj = VerbConjugation(**row.to_dict())
 
-            note = self._create_verb_note(verb, sound_field_value)
+            # Get sound files for both conjugated form and example
+            conjugated_sound, conjugated_phrase = verb_conj.get_conjugated_audio()
+            example_sound, example_phrase = verb_conj.get_example_audio()
+
+            # Process sound files
+            sound_field_value = ""
+            example_sound_field_value = ""
+            if audio_directory:
+                conjugated_path = os.path.join(audio_directory, conjugated_sound)
+                example_path = os.path.join(audio_directory, example_sound)
+                if os.path.exists(conjugated_path):
+                    media_files.append(conjugated_path)
+                    sound_field_value = f"[sound:{conjugated_sound}]"
+                if os.path.exists(example_path):
+                    media_files.append(example_path)
+                    example_sound_field_value = f"[sound:{example_sound}]"
+
+            # Create note with the new fields
+            note_fields = [
+                verb_conj.guid,  # Using ID as GUID
+                verb_conj.conjugated,  # Greek conjugated form
+                verb_conj.english,  # English translation
+                verb_conj.greek_sentence,  # Example sentence
+                sound_field_value,  # Sound for conjugated form
+                example_sound_field_value,  # Sound for example sentence
+                verb_conj.tense.lower(),
+                verb_conj.person.lower(),
+                verb_conj.number.lower(),
+            ]
+
+            note = Note(
+                model=self.verb_model,
+                fields=note_fields,
+                tags=[f"verb::{verb_conj.verb}"],  # Tag with base verb
+                guid=str(verb_conj.id),  # Use ID as GUID
+            )
             deck.add_note(note)
 
         package = Package(deck)
         if media_files:
-            package.media_files = media_files
+            package.media_files = list(set(media_files))  # Ensure unique media files
         package.write_to_file(output_file)

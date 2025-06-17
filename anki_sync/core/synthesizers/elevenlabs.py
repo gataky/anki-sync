@@ -21,21 +21,17 @@ class ElevenLabsSynthesizer(BaseSynthesizer):
             api_key=os.getenv("ELEVENLABS_API_KEY"),
         )
 
-    def synthesize(self, text: str, output_directory: str) -> None:
+    def synthesize(self, text: str, output_filename: str) -> None:
         """Synthesize text to speech using ElevenLabs.
 
         Args:
             text: The text to synthesize into speech
-            output_directory: Directory where the audio file will be saved
+            output_filename: Where the audio file will be saved
 
         The audio file will be saved as {text}.mp3 in the output directory.
         Uses the multilingual v2 model with a standard Greek voice.
         """
-        if not (text and output_directory and self.client):
-            return
 
-        filename = text.split(" ", 1)[-1]
-        output_filename = f"{output_directory}/{filename}.mp3"
         voice_id = "2Lb1en5ujrODDIqmp7F3"
         model_id = "eleven_multilingual_v2"
 

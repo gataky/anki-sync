@@ -56,7 +56,7 @@ You will be given a verb and I would like you conjugate the verb in this order:
     Future Simple 2nd person plural.
     Future Simple 3rd person plural.
 
-Each row should have:
+Each conjugation above should be a row and should have the following fields:
     The conjugated Greek verb.
     The English translation of the verb.
     An example in Greek using the verb.

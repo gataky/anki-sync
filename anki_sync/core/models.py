@@ -76,3 +76,25 @@ class Verb(BaseModel):
 
     class Config:
         validate_assignment = True
+
+
+class VerbConjugation(BaseModel):
+    guid: str = Field(
+        default_factory=lambda: generate_guid(10),
+        description="Unique identifier for the verb (10 characters). Auto-generated if not provided.",
+    )
+    id: int = Field(..., alias="ID", description="Unique identifier for the conjugation entry.")
+    verb: str = Field(..., alias="Verb", description="The infinitive or base form of the Greek verb.")
+    conjugated: str = Field(..., alias="Conjugated", description="The conjugated form of the Greek verb.")
+    english: str = Field(..., alias="English", description="English translation of the conjugated verb.")
+    greek_sentence: str = Field(..., alias="Greek Sentence", description="A Greek sentence using the conjugated verb.")
+    english_sentence: str = Field(..., alias="English Sentence", description="English translation of the Greek sentence.")
+    tense: str = Field(..., alias="Tense",description="The grammatical tense of the conjugation (e.g., 'Past Simple').")
+    person: str = Field(...,alias="Person", description="The grammatical person (e.g., '1st', '2nd', '3rd').")
+    number: str = Field(...,alias="Number", description="The grammatical number (e.g., 'Singular', 'Plural').")
+
+    def get_conjugated_audio(self):
+        return f"{self.verb}-{self.id}.mp3", self.conjugated
+
+    def get_example_audio(self):
+        return f"{self.verb}-{self.id}-ex.mp3", self.greek_sentence

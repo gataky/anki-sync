@@ -1,65 +1,82 @@
 import io
 import os
 from pathlib import Path
+from typing import cast
 import pandas as pd
 import logging
+from anki_sync.core.anki import AnkiDeckManager
 from anki_sync.core.gemini_client import GeminiClient, GeminiAuthError, GeminiQueryError
 from anki_sync.core.gsheets import GoogleSheetsManager
+from anki_sync.core.models import VerbConjugation
+from anki_sync.core.synthesizers.audio_synthesizer import AudioSynthesizer
 
 # Configure basic logging for the script
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(name)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 # --- Configuration ---
+def process_verbs():
+    logger.info("Starting Gemini API query script using GeminiClient...")
+    sheets = GoogleSheetsManager(os.environ.get("GOOGLE_SHEET_ID", ""))
+    client = GeminiClient()
+
+    # Get verb data and format columns
+    data = sheets.get_sheet_data("Verbs")
+    data["Learning"] = pd.to_numeric(data["Learning"])
+    data["Processed"] = pd.to_numeric(data["Processed"])
+    # I only want fields that I'm learning and haven't been processed yet.
+    verbs = data[(data["Learning"] == 1) & (data["Processed"] != 1)]
+
+    column_names = [
+        'Conjugated',
+        'English',
+        'Greek Sentence',
+        'English Sentence',
+        'Tense',
+        'Person',
+        'Number'
+    ]
+
+    conjugated = []
+    for i, verb in verbs.iterrows():
+        lex: str = cast(str, verb["Greek"])
+
+        resp = client.query(lex)
+        csv_data_string = "\n".join(resp.split("\n")[1:-2])
+        print(csv_data_string)
+        print("="*100)
+        csv_file_object = io.StringIO(csv_data_string)
+
+        df = pd.read_csv(csv_file_object, header=None, names=column_names)
+        df.insert(loc=0, column="Verb", value=lex)
+        conjugated.append(df)
+
+    all = pd.concat(conjugated)
+    clean = all[all['Conjugated'] != '```']
+
+    clean.to_csv('output.csv')
+
+def create_verb_deck():
+    sheets = GoogleSheetsManager(os.environ.get("GOOGLE_SHEET_ID", ""))
+    data   = sheets.get_sheet_data("Verbs Conjugated")
+    synth  = AudioSynthesizer("./media", "elevenlabs")
+
+    anki = AnkiDeckManager()
+
+    for i, verb in data.iterrows():
+        v = VerbConjugation(**verb.to_dict())
+        verb["GUID"] = v.guid
+        print(i)
+
+        filename, phrase = v.get_conjugated_audio()
+        synth.synthesize_if_needed(phrase, filename)
+
+        filename, phrase = v.get_example_audio()
+        synth.synthesize_if_needed(phrase, filename)
+        print("="*100)
+
+
+    anki.create_verb_deck(data, "Greek Verbs", "verbs.apkg", "./media")
 
 if __name__ == "__main__":
-    logger.info("Starting Gemini API query script using GeminiClient...")
-    try:
-        sheets = GoogleSheetsManager(
-            os.environ.get("GOOGLE_SHEET_ID"), None
-        )
-        client = GeminiClient()
-
-        data = sheets.get_sheet_data("Verbs")
-
-        data["Learning"] = pd.to_numeric(data["Learning"])
-        data["Processed"] = pd.to_numeric(data["Processed"])
-
-        verbs = data[(data["Learning"] == 1) & (data["Processed"] != 1)]
-
-        column_names = [
-            'Conjugated',
-            'English',
-            'Greek Sentence',
-            'English Sentence',
-            'Tense',
-            'Person',
-            'Number'
-        ]
-
-        conjugated = []
-        for i, verb in verbs.iterrows():
-            lex = verb["Greek"]
-
-            resp = client.query(lex)
-            csv_data_string = "\n".join(resp.split("\n")[1:-1])
-            csv_file_object = io.StringIO(csv_data_string)
-
-            df = pd.read_csv(csv_file_object, header=None, names=column_names)
-            df.insert(loc=0, column="Verb", value=lex)
-            conjugated.append(df)
-
-        all = pd.concat(conjugated)
-        clean = all[all['Conjugated'] != '```']
-
-        clean.to_csv('output.csv')
-
-
-    except FileNotFoundError as e:
-        logger.error(f"Configuration error: {e}", exc_info=True)
-    except GeminiAuthError as e:
-        logger.error(f"Authentication/Configuration error with Gemini: {e}", exc_info=True)
-    except GeminiQueryError as e:
-        logger.error(f"Error during Gemini API query: {e}", exc_info=True)
-    except Exception as e: # Catch-all for other unexpected errors
-        logger.error(f"An unexpected error occurred: {e}", exc_info=True)
+    create_verb_deck()
