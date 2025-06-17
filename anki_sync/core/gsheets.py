@@ -7,7 +7,6 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from typing import Union # For Union type hint
 from .models import Word, Verb # Added Verb
-from .stats import Stats
 # from .word_processor import WordProcessor # Will use a generic processor type
 
 
@@ -20,15 +19,15 @@ class GoogleSheetsManager:
 
     SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 
-    def __init__(self, item_processor: Any, stats: Stats) -> None:
+    def __init__(self, sheet_id: str, item_processor: Any) -> None:
         """Initialize the GoogleSheetsManager with required dependencies.
 
         Args:
+            sheet_id: The ID of the Google Sheet to manage.
             word_processor: Instance of WordProcessor for processing sheet data
-            stats: Instance of Stats for tracking processing statistics
         """
+        self.sheet_id = sheet_id
         self.item_processor = item_processor # Renamed from word_processor
-        self.stats = stats
         self.service = self._get_sheets_service()
 
     def _get_sheets_service(self):
@@ -64,7 +63,6 @@ class GoogleSheetsManager:
     def _write_guids_to_sheet(
         self,
         sheet_api: Any,
-        sheet_id: str,
         sheet_name: str,
         updates: List[Dict[str, Any]],
     ):
@@ -74,24 +72,21 @@ class GoogleSheetsManager:
 
         try:
             body = {"valueInputOption": "USER_ENTERED", "data": updates}
-            sheet_api.values().batchUpdate(spreadsheetId=sheet_id, body=body).execute()
+            sheet_api.values().batchUpdate(spreadsheetId=self.sheet_id, body=body).execute()
         except Exception:
-            self.stats.errors["guid_update"] = (
-                self.stats.errors.get("guid_update", 0) + 1
-            )
+            pass
 
-    def get_sheet_data(self, sheet_id: str, sheet_name: Optional[str] = None) -> pd.DataFrame:
+    def get_sheet_data(self, sheet_name: Optional[str] = None) -> pd.DataFrame:
         """Fetch and process words from a Google Sheet.
 
         Args:
-            sheet_id: The ID of the Google Sheet to fetch data from
             sheet_name: Optional name of the specific sheet/tab to read from
         """
         # Get the sheet data
         result = (
             self.service.spreadsheets()
             .values()
-            .get(spreadsheetId=sheet_id, range=sheet_name)
+            .get(spreadsheetId=self.sheet_id, range=sheet_name)
             .execute()
         )
         values = result.get("values", [])
@@ -114,12 +109,11 @@ class GoogleSheetsManager:
         return df
 
     def get_items_from_sheet(
-        self, sheet_id: str, sheet_name: Optional[str] = None
+        self, sheet_name: Optional[str] = None
     ) -> List[Union[Word, Verb, Any]]: # Adjusted return type
         """Fetch and process items (words, verbs, etc.) from a Google Sheet.
 
         Args:
-            sheet_id: The ID of the Google Sheet to fetch data from
             sheet_name: Optional name of the specific sheet/tab to read from
 
         Returns:
@@ -144,8 +138,7 @@ class GoogleSheetsManager:
                 # Let's assume sheet_name is the actual name used in ranges like 'Sheet1'.
                 pass # actual_sheet_name remains as passed
 
-            df = self.get_sheet_data(sheet_id, actual_sheet_name)
-            self.stats.total_lines_read = len(df)
+            df = self.get_sheet_data(actual_sheet_name)
 
             items = []
             guid_updates_batch = []
@@ -154,17 +147,15 @@ class GoogleSheetsManager:
                     item, guid_update = self.item_processor.process_row(row, actual_sheet_name or "Sheet1", idx)
                     if item:
                         items.append(item)
-                        self.stats.total_lines_processed += 1
                     if guid_update:
                         guid_updates_batch.append(guid_update)
                 except Exception as e:
                     print(e)
-                    self.stats.errors.append(f"Error processing row: {str(e)}")
                     continue
 
             if guid_updates_batch and actual_sheet_name: # Ensure sheet_name is valid for writing
                 self._write_guids_to_sheet(
-                    self.service.spreadsheets(), sheet_id, actual_sheet_name, guid_updates_batch
+                    self.service.spreadsheets(), actual_sheet_name, guid_updates_batch
                 )
             elif guid_updates_batch and not actual_sheet_name:
                 print("Warning: GUID updates were generated but sheet_name was not available to write them back.")

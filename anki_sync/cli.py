@@ -3,7 +3,6 @@ import click
 from .core.anki import AnkiDeckManager
 from .core.gsheets import GoogleSheetsManager
 from .core.models import Word, Verb # Added Verb
-from .core.stats import Stats
 from .core.synthesizers.audio_synthesizer import AudioSynthesizer
 from .core.word_processor import WordProcessor
 from .core.verb_processor import VerbProcessor # Added VerbProcessor
@@ -70,36 +69,31 @@ def sync(
     All options can be set via environment variables or command-line arguments.
     Command-line arguments take precedence over environment variables.
     """
-    WORDS_SHEET_NAME = "Words"
-    VERBS_SHEET_NAME = "Verbs"
-    stats = Stats()
+    WORDS_SHEET_NAME = "Words"  # Corrected typo
+    VERBS_SHEET_NAME = "Verbs"  # Corrected typo
 
-    stats = Stats()
     audio_synthesizer = AudioSynthesizer(
         output_directory=anki_audio_directory,
-        stats=stats,
         synthesizer_type=synthesizer,
     )
 
     words_data = []
     try:
         click.echo(f"Attempting to fetch words from sheet: '{WORDS_SHEET_NAME}'...")
-        word_processor = WordProcessor(audio_synthesizer=audio_synthesizer, stats=stats)
-        gsheets_manager_words = GoogleSheetsManager(item_processor=word_processor, stats=stats)
-        words_data = gsheets_manager_words.get_items_from_sheet(sheet_id, WORDS_SHEET_NAME)
+        word_processor = WordProcessor(audio_synthesizer=audio_synthesizer)
+        gsheets_manager_words = GoogleSheetsManager(sheet_id=sheet_id, item_processor=word_processor)
+        words_data = gsheets_manager_words.get_items_from_sheet(WORDS_SHEET_NAME)
         click.echo(f"Fetched {len(words_data)} words from sheet '{WORDS_SHEET_NAME}'.")
     except Exception as e:
-        # GoogleSheetsManager.get_items_from_sheet already prints a warning if sheet_name is None
-        # or if HttpError occurs. We can add more specific handling here if needed.
         click.secho(f"Could not fetch or process words from sheet '{WORDS_SHEET_NAME}'. Error: {e}", fg="yellow")
-        # words_data remains empty, process continues
 
     verbs_data = []
     try:
         click.echo(f"Attempting to fetch verbs from sheet: '{VERBS_SHEET_NAME}'...")
-        verb_processor = VerbProcessor(audio_synthesizer=audio_synthesizer, stats=stats)
-        gsheets_manager_verbs = GoogleSheetsManager(item_processor=verb_processor, stats=stats)
-        verbs_data = gsheets_manager_verbs.get_items_from_sheet(sheet_id, VERBS_SHEET_NAME)
+        verb_processor = VerbProcessor(audio_synthesizer=audio_synthesizer)
+        gsheets_manager_verbs = GoogleSheetsManager(sheet_id=sheet_id, item_processor=verb_processor)
+        verbs_data = gsheets_manager_verbs.get_items_from_sheet(VERBS_SHEET_NAME)
+
         click.echo(f"Fetched {len(verbs_data)} verbs from sheet '{VERBS_SHEET_NAME}'.")
     except Exception as e:
         click.secho(f"Could not fetch or process verbs from sheet '{VERBS_SHEET_NAME}'. Error: {e}", fg="yellow")
@@ -117,8 +111,8 @@ def sync(
         verbs=verbs_data if verbs_data else None,
         audio_directory=anki_audio_directory,
     )
-    stats.print_summary() # Stats will be cumulative
     click.secho(f"Combined deck '{deck_name}' created successfully at {output_file}", fg="green")
+
 
 if __name__ == "__main__":
     main()

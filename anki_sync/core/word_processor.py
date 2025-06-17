@@ -6,7 +6,6 @@ from anki_sync.utils.guid import generate_guid
 
 from .synthesizers.audio_synthesizer import AudioSynthesizer
 from .models import Word
-from .stats import Stats # Added Stats
 
 
 class WordProcessor:
@@ -26,15 +25,13 @@ class WordProcessor:
         None: "",  # If there is no gender then return an empty string.
     }
 
-    def __init__(self, audio_synthesizer: AudioSynthesizer, stats: Stats) -> None:
+    def __init__(self, audio_synthesizer: AudioSynthesizer) -> None:
         """Initialize the WordProcessor with required dependencies.
 
         Args:
             audio_synthesizer: Instance of AudioSynthesizer for handling audio generation
-            stats: Instance for tracking processing statistics.
         """
         self.audio_synthesizer = audio_synthesizer
-        self.stats = stats
 
     def _process_guid_for_row(
         self, guid_cell_value: Any, row_idx: int, sheet_name: str
@@ -49,7 +46,6 @@ class WordProcessor:
             print(
                 f"Info: Row {actual_sheet_row_num} in sheet '{sheet_name}' is missing GUID. Generated: {guid_to_use}"
             )
-            self.stats.new_lines_processed += 1
             guid_update_item = {
                 "range": f"{sheet_name}!A{actual_sheet_row_num}",
                 "values": [[guid_to_use]],

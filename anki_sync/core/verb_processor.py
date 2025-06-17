@@ -4,22 +4,19 @@ import pandas as pd
 
 from anki_sync.utils.guid import generate_guid
 from .synthesizers.audio_synthesizer import AudioSynthesizer
-from .models import Verb
-from .stats import Stats
+from .models import Verb  # Import Verb
 
 
 class VerbProcessor:
     """Processes verb data from Google Sheets into Verb objects."""
 
-    def __init__(self, audio_synthesizer: AudioSynthesizer, stats: Stats) -> None:
+    def __init__(self, audio_synthesizer: AudioSynthesizer) -> None:
         """Initialize the VerbProcessor.
 
         Args:
             audio_synthesizer: Instance for audio generation.
-            stats: Instance for tracking processing statistics.
         """
         self.audio_synthesizer = audio_synthesizer
-        self.stats = stats
 
     def _process_guid_for_row(
         self, guid_cell_value: Any, row_idx: int, sheet_name: str
@@ -34,7 +31,6 @@ class VerbProcessor:
             print(
                 f"Info: Row {actual_sheet_row_num} in sheet '{sheet_name}' is missing GUID. Generated: {guid_to_use}"
             )
-            self.stats.new_lines_processed += 1
             # Assuming GUID is in column A for the update range
             guid_update_item = {
                 "range": f"{sheet_name}!A{actual_sheet_row_num}",
