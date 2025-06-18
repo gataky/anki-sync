@@ -3,8 +3,9 @@ from typing import Any, Dict, List, Optional, Tuple
 import pandas as pd
 
 from anki_sync.utils.guid import generate_guid
-from .synthesizers.audio_synthesizer import AudioSynthesizer
+
 from .models import Verb  # Import Verb
+from .synthesizers.audio_synthesizer import AudioSynthesizer
 
 
 class VerbProcessor:
@@ -27,7 +28,9 @@ class VerbProcessor:
         if not guid_to_use:
             new_guid_value = generate_guid()
             guid_to_use = new_guid_value
-            actual_sheet_row_num = row_idx + 2  # Assuming header is row 1, data starts row 2
+            actual_sheet_row_num = (
+                row_idx + 2
+            )  # Assuming header is row 1, data starts row 2
             print(
                 f"Info: Row {actual_sheet_row_num} in sheet '{sheet_name}' is missing GUID. Generated: {guid_to_use}"
             )
@@ -43,7 +46,7 @@ class VerbProcessor:
         group: Optional[str],
     ) -> List[str]:
         """Compiles a list of tags from group."""
-        tags_list = ["verb"] # Base tag for all verbs
+        tags_list = ["verb"]  # Base tag for all verbs
 
         group_val = str(group or "").strip()
         if group_val:
@@ -73,7 +76,7 @@ class VerbProcessor:
             return None, None
 
         # Process GUID
-        guid_cell_value = row.get("GUID") # Assumes a 'GUID' column for verbs too
+        guid_cell_value = row.get("GUID")  # Assumes a 'GUID' column for verbs too
         guid_to_use, guid_update_item = self._process_guid_for_row(
             guid_cell_value, row_idx, sheet_name
         )
@@ -89,7 +92,7 @@ class VerbProcessor:
             )
             if sound_filename:
                 self.audio_synthesizer.synthesize_if_needed(
-                    greek_citation_form, sound_filename # Audio for the citation form
+                    greek_citation_form, sound_filename  # Audio for the citation form
                 )
 
         # Extract other verb-specific fields

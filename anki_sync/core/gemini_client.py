@@ -1,23 +1,25 @@
+import logging
 import os
 from pathlib import Path
-import google.generativeai as genai
 from typing import Optional
-import logging
+
+import google.generativeai as genai
 
 # Configure logging for the module
 logger = logging.getLogger(__name__)
 
+
 class GeminiClientError(Exception):
     """Base exception for GeminiClient errors."""
-    pass
+
 
 class GeminiAuthError(GeminiClientError):
     """Exception raised for authentication/configuration errors."""
-    pass
+
 
 class GeminiQueryError(GeminiClientError):
     """Exception raised for errors during API query."""
-    pass
+
 
 my_system_instruction = """
 You are a factual, to the point, and knowledgeable modern Greek tool.
@@ -66,10 +68,12 @@ Each conjugation above should be a row and should have the following fields:
     The number (i.e. singular or plural).
     """
 
+
 class GeminiClient:
     """
     A client for interacting with the Google Gemini API using service account authentication.
     """
+
     def __init__(self, system_instruction: Optional[str] = my_system_instruction):
         """
         Initializes the GeminiClient.
@@ -84,7 +88,9 @@ class GeminiClient:
             GeminiAuthError: If there's an error configuring the Gemini API.
         """
         home_directory = str(Path.home())
-        service_account_key_path = os.path.join(home_directory, ".bunes-service-account.json")
+        service_account_key_path = os.path.join(
+            home_directory, ".bunes-service-account.json"
+        )
         model_name = "gemini-1.5-flash"
 
         self.service_account_key_path = service_account_key_path
@@ -103,13 +109,17 @@ class GeminiClient:
             )
 
         os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = self.service_account_key_path
-        logger.info(f"GOOGLE_APPLICATION_CREDENTIALS set to: {self.service_account_key_path}")
+        logger.info(
+            f"GOOGLE_APPLICATION_CREDENTIALS set to: {self.service_account_key_path}"
+        )
 
         try:
-            genai.configure(api_key=None) # Uses GOOGLE_APPLICATION_CREDENTIALS
+            genai.configure(api_key=None)  # Uses GOOGLE_APPLICATION_CREDENTIALS
             logger.info("Gemini API configured successfully using service account.")
         except Exception as e:
-            logger.error(f"Error configuring Gemini API with service account: {e}", exc_info=True)
+            logger.error(
+                f"Error configuring Gemini API with service account: {e}", exc_info=True
+            )
             raise GeminiAuthError(
                 "Failed to configure Gemini API. Ensure key file is valid and has API access."
             ) from e
@@ -128,13 +138,19 @@ class GeminiClient:
             GeminiQueryError: If an error occurs during the API call or response is problematic.
         """
         try:
-            model = genai.GenerativeModel(self.model_name, system_instruction=self.system_instruction)
+            model = genai.GenerativeModel(
+                self.model_name, system_instruction=self.system_instruction
+            )
             logger.info(f"Sending prompt to Gemini model '{self.model_name}'.")
             response = model.generate_content(prompt_text)
 
             if response.prompt_feedback and response.prompt_feedback.block_reason:
-                raise GeminiQueryError(f"Gemini response blocked: {response.prompt_feedback.block_reason}")
+                raise GeminiQueryError(
+                    f"Gemini response blocked: {response.prompt_feedback.block_reason}"
+                )
             return response.text
         except Exception as e:
-            logger.error(f"An error occurred during the Gemini API call: {e}", exc_info=True)
+            logger.error(
+                f"An error occurred during the Gemini API call: {e}", exc_info=True
+            )
             raise GeminiQueryError(f"Gemini API call failed: {e}") from e

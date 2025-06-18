@@ -4,8 +4,8 @@ import pandas as pd
 
 from anki_sync.utils.guid import generate_guid
 
-from .synthesizers.audio_synthesizer import AudioSynthesizer
 from .models import Word
+from .synthesizers.audio_synthesizer import AudioSynthesizer
 
 
 class WordProcessor:
@@ -120,7 +120,6 @@ class WordProcessor:
             guid_cell_value, row_idx, sheet_name
         )
 
-
         original_greek_word = row["Greek"].strip()
         processed_greek_word = original_greek_word
 
@@ -142,8 +141,12 @@ class WordProcessor:
 
         # Process tags using hierarchical tag system
         # Get all columns from Category onwards
-        category_index = row.index.get_loc("Category") if "Category" in row.index else -1
-        hierarchical_tag_cells = row.iloc[category_index:].tolist() if category_index >= 0 else []
+        category_index = (
+            row.index.get_loc("Category") if "Category" in row.index else -1
+        )
+        hierarchical_tag_cells = (
+            row.iloc[category_index:].tolist() if category_index >= 0 else []
+        )
 
         tags = self._compile_tags_for_word(
             row.get("Class"),

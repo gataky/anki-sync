@@ -1,4 +1,5 @@
 import os
+
 from google.oauth2.service_account import Credentials
 
 
@@ -16,7 +17,7 @@ class GoogleAuth:
 class ElevenlabsAuth:
 
     def __init__(self):
-        self._certs: str =os.getenv("ELEVENLABS_API_KEY", "")
+        self._certs: str = os.getenv("ELEVENLABS_API_KEY", "")
 
     @property
     def certs(self) -> str:

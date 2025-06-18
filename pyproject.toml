@@ -24,6 +24,8 @@ ipython = "^9.3.0"
 requests = "^2.32.4"
 beautifulsoup4 = "^4.13.4"
 google-generativeai = "^0.8.5"
+flake8 = "^7.2.0"
+flake8-pyproject = "^1.2.3"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.0"
@@ -32,6 +34,12 @@ ruff = "^0.1.0"
 
 [tool.poetry.scripts]
 anki-sync = "anki_sync.cli:main"
+
+[tool.flake8]
+exclude = ['.git','__pycache__','.venv']
+max-line-length = 120
+application-import-names = 'rmx_edit_showcase'
+extend-ignore = ['E722','E402']
 
 [build-system]
 requires = ["poetry-core"]

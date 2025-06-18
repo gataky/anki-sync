@@ -1,12 +1,11 @@
 import hashlib
 import os
-from typing import List, Optional, Union, Any
+from typing import List, Optional, Union
 
-from genanki import Deck, Model, Note, Package
 import pandas as pd
+from genanki import Deck, Model, Note, Package
 
-from .models import Word, Verb, VerbConjugation
-from ..utils.guid import generate_guid
+from .models import Verb, VerbConjugation, Word
 
 
 class AnkiDeckManager:
@@ -47,7 +46,7 @@ class AnkiDeckManager:
     # Updated fields based on new Verb model and sheet structure
     ANKI_VERB_MODEL_FIELDS = [
         {"name": "GUID"},
-        {"name": "Greek"}, # Main citation form
+        {"name": "Greek"},  # Main citation form
         {"name": "English"},
         {"name": "Example"},
         {"name": "Sound"},
@@ -60,29 +59,27 @@ class AnkiDeckManager:
     ANKI_VERB_MODEL_TEMPLATES = [
         {
             "name": "Card 1 (English to Greek Verb)",
-            "qfmt": '''
+            "qfmt": """
 {{English}}
 <br><small>{{Tense}} {{Person}} person {{Number}}</small>
-''',
-            "afmt": '''
+""",
+            "afmt": """
 {{FrontSide}}
 <hr id="answer">
 {{Greek}} {{Sound}}<br>{{Example}} {{SoundEx}}
-''',
+""",
         },
-
-
         {
             "name": "Card 2 (Greek Verb to English)",
-            "qfmt": '''
+            "qfmt": """
 {{Greek}} {{Sound}}<br>{{Example}} {{SoundEx}}
 <br><small>{{Tense}} {{Person}} person {{Number}}</small>
-''',
-            "afmt": '''
+""",
+            "afmt": """
 {{FrontSide}}
 <hr id="answer">
 {{English}}
-''',
+""",
         },
     ]
 
@@ -129,7 +126,7 @@ class AnkiDeckManager:
         sound_field_value = ""
         media_files: List[str] = []
 
-        if item.sound: # Both Word and Verb have a .sound attribute
+        if item.sound:  # Both Word and Verb have a .sound attribute
             if sound_files_dir:
                 sound_file_path = os.path.join(sound_files_dir, item.sound)
                 if os.path.exists(sound_file_path):
@@ -174,7 +171,9 @@ class AnkiDeckManager:
 
         for word in words:
             # Process sound file and get media files
-            sound_field_value, word_media_files = self._process_item_sound_file(word, audio_directory)
+            sound_field_value, word_media_files = self._process_item_sound_file(
+                word, audio_directory
+            )
             media_files.extend(word_media_files)
 
             # Create note using the helper method
@@ -210,7 +209,7 @@ class AnkiDeckManager:
             verb_conj = VerbConjugation(**row.to_dict())
 
             # Get sound files for both conjugated form and example
-            conjugated_sound, conjugated_phrase = verb_conj.get_conjugated_audio()
+            conjugated_sound, conjugated_phrase = verb_conj.get_audio()
             example_sound, example_phrase = verb_conj.get_example_audio()
 
             # Process sound files

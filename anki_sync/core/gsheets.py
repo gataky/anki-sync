@@ -3,16 +3,10 @@ from typing import Any
 import pandas as pd
 from googleapiclient.discovery import build
 
-from anki_sync.core.auth.auth import GoogleAuth # For Union type hint
+from anki_sync.core.auth.auth import GoogleAuth  # For Union type hint
 
 
 class GoogleSheetsManager(GoogleAuth):
-    """Manages interactions with Google Sheets API and data processing.
-
-    This class handles authentication, fetching data from Google Sheets,
-    and processing the data into items (like Word or Verb objects) using a provided processor.
-    """
-
 
     def __init__(self, sheet_id: str) -> None:
         super().__init__()
@@ -20,25 +14,29 @@ class GoogleSheetsManager(GoogleAuth):
 
         Args:
             sheet_id: The ID of the Google Sheet to manage.
-            word_processor: Instance of WordProcessor for processing sheet data
         """
-        self.sheet_id: str = sheet_id
-        self.service = build("sheets", "v4", credentials=self.certs)
+        self._sheet_id: str = sheet_id
+        self._client = (
+            build("sheets", "v4", credentials=self.certs).spreadsheets().values()
+        )
 
+    def batch_update(self, updates: list[dict[str, Any]]):
+        """Writes new GUIDs back to the Google Sheet using a batch update."""
+        if not updates:
+            return
 
-    def get_sheet_data(self, sheet_name: str | None = None) -> pd.DataFrame:
+        body = {"valueInputOption": "USER_ENTERED", "data": updates}
+        self._client.batchUpdate(spreadsheetId=self._sheet_id, body=body).execute()
+
+    def get_rows(self, sheet_name: str) -> pd.DataFrame:
         """Fetch and process words from a Google Sheet.
 
         Args:
             sheet_name: Optional name of the specific sheet/tab to read from
         """
-        result = (
-            self.service.spreadsheets()
-            .values()
-            .get(spreadsheetId=self.sheet_id, range=sheet_name)
-            .execute()
-        )
-        values = result.get("values", [])
+        values = (
+            self._client.get(spreadsheetId=self._sheet_id, range=sheet_name).execute()
+        ).get("values", [])
 
         if len(values) == 0:
             return pd.DataFrame()
