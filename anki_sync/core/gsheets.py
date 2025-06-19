@@ -10,18 +10,12 @@ class GoogleSheetsManager(GoogleAuth):
 
     def __init__(self, sheet_id: str) -> None:
         super().__init__()
-        """Initialize the GoogleSheetsManager with required dependencies.
-
-        Args:
-            sheet_id: The ID of the Google Sheet to manage.
-        """
         self._sheet_id: str = sheet_id
         self._client = (
             build("sheets", "v4", credentials=self.certs).spreadsheets().values()
         )
 
     def batch_update(self, updates: list[dict[str, Any]]):
-        """Writes new GUIDs back to the Google Sheet using a batch update."""
         if not updates:
             return
 
@@ -29,11 +23,6 @@ class GoogleSheetsManager(GoogleAuth):
         self._client.batchUpdate(spreadsheetId=self._sheet_id, body=body).execute()
 
     def get_rows(self, sheet_name: str) -> pd.DataFrame:
-        """Fetch and process words from a Google Sheet.
-
-        Args:
-            sheet_name: Optional name of the specific sheet/tab to read from
-        """
         values = (
             self._client.get(spreadsheetId=self._sheet_id, range=sheet_name).execute()
         ).get("values", [])
