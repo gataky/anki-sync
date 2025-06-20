@@ -113,6 +113,32 @@ class AnkiDeckManager:
             css=self.ANKI_SHARED_CSS,
         )
 
+    def _augment_english_verb_phrase(
+            self, english_phrase: str, tense: str, number: str, person: str,
+    ) -> str:
+        """
+        Augments an English verb phrase with subscripts for aspect and number.
+        e.g., "I was running" (Imperfective, Singular) -> "I<sub>IS</sub> was running<sub>IS</sub>"
+        e.g., "I ran" (Perfective, Singular) -> "I<sub>PS</sub> ran<sub>PS</sub>"
+        """
+        tense_lower = tense.lower()
+        if "continuous" in tense_lower or "present" in tense_lower:
+            aspect_subscript = "⟳"  # Imperfective
+        else:  # simple tenses
+            aspect_subscript = "●"  # Perfective
+
+        if person == "2nd":
+            number_subscript = "👤" if number.lower() == "singular" else "👥"
+        else:
+            number_subscript = ""
+
+        parts = english_phrase.strip().split(" ")
+        if not parts or not parts[0]:
+            return english_phrase  # Return original if empty or malformed
+
+        middle_part = " ".join(parts[1:-1])
+        return f"{parts[0]}<sup>{number_subscript}</sup> {middle_part} {parts[-1]}<sup>{aspect_subscript}</sup>".replace("  ", " ")
+
     def _create_deck(self, deck_name: str) -> Deck:
         """Creates a new Anki deck with the given name."""
         deck_id = int(hashlib.md5(deck_name.encode("utf-8")).hexdigest(), 16) % (10**10)
@@ -207,28 +233,33 @@ class AnkiDeckManager:
             # Create VerbConjugation object from row
             verb_conj = VerbConjugation(**row.to_dict())
 
+            # Augment the English phrase with aspect and number subscripts
+            augmented_english = self._augment_english_verb_phrase(
+                verb_conj.english, verb_conj.tense, verb_conj.number, verb_conj.person
+            )
+
             # Get sound files for both conjugated form and example
-            conjugated_sound, conjugated_phrase = verb_conj.get_audio()
-            example_sound, example_phrase = verb_conj.get_example_audio()
+            conjugated_sound = verb_conj.get_audio()
+            example_sound = verb_conj.get_example_audio()
 
             # Process sound files
             sound_field_value = ""
             example_sound_field_value = ""
             if audio_directory:
-                conjugated_path = os.path.join(audio_directory, conjugated_sound)
-                example_path = os.path.join(audio_directory, example_sound)
+                conjugated_path = os.path.join(audio_directory, conjugated_sound.filename)
+                example_path = os.path.join(audio_directory, example_sound.filename)
                 if os.path.exists(conjugated_path):
                     media_files.append(conjugated_path)
-                    sound_field_value = f"[sound:{conjugated_sound}]"
+                    sound_field_value = f"[sound:{conjugated_sound.filename}]"
                 if os.path.exists(example_path):
                     media_files.append(example_path)
-                    example_sound_field_value = f"[sound:{example_sound}]"
+                    example_sound_field_value = f"[sound:{example_sound.filename}]"
 
             # Create note with the new fields
             note_fields = [
                 verb_conj.guid,  # Using ID as GUID
                 verb_conj.conjugated,  # Greek conjugated form
-                verb_conj.english,  # English translation
+                augmented_english,  # Augmented English translation
                 verb_conj.greek_sentence,  # Example sentence
                 sound_field_value,  # Sound for conjugated form
                 example_sound_field_value,  # Sound for example sentence
