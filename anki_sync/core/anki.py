@@ -73,7 +73,6 @@ class AnkiDeckManager:
             "name": "Card 2 (Greek Verb to English)",
             "qfmt": """
 {{Greek}} {{Sound}}<br>{{Example}} {{SoundEx}}
-<br><small>{{Tense}} {{Person}} person {{Number}}</small>
 """,
             "afmt": """
 {{FrontSide}}
