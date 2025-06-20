@@ -70,15 +70,15 @@ def create_verb_deck():
 
     for i, verb in data.iterrows():
         v = VerbConjugation(**verb.to_dict())
+        print(v.guid, verb["GUID"])
         verb["GUID"] = v.guid
-        print(i)
 
         audio = v.get_audio()
         synth.synthesize_if_needed(audio.phrase, audio.filename)
 
         audio = v.get_example_audio()
         synth.synthesize_if_needed(audio.phrase, audio.filename)
-        print("=" * 100)
+        print("=" * 25)
 
     anki.create_verb_deck(data, "Greek Verbs", "verbs.apkg", "./media")
 

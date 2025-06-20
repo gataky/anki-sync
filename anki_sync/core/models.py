@@ -86,6 +86,7 @@ class VerbConjugation(BaseModel):
     guid: str = Field(
         default_factory=lambda: generate_guid(10),
         description="Unique identifier for the verb (10 characters). Auto-generated if not provided.",
+        alias="GUID",
     )
     id: int = Field(
         ..., alias="ID", description="Unique identifier for the conjugation entry."
