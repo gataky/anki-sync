@@ -81,18 +81,16 @@ class VerbProcessor:
             guid_cell_value, row_idx, sheet_name
         )
 
-        greek_citation_form = str(row["Greek"]).strip()
+        greek_form = str(row["Greek"]).strip()
         english_translation = str(row["English"]).strip()
 
         # Generate sound filename and synthesize if needed
         sound_filename = ""
-        if greek_citation_form:
-            sound_filename = self.audio_synthesizer.generate_sound_filename(
-                greek_citation_form
-            )
+        if greek_form:
+            sound_filename = self.audio_synthesizer.generate_sound_filename(greek_form)
             if sound_filename:
                 self.audio_synthesizer.synthesize_if_needed(
-                    greek_citation_form, sound_filename  # Audio for the citation form
+                    greek_form, sound_filename  # Audio for the citation form
                 )
 
         # Extract other verb-specific fields
@@ -111,7 +109,7 @@ class VerbProcessor:
         verb = Verb(
             guid=guid_to_use,
             english=english_translation,
-            greek_citation=greek_citation_form,
+            greek=greek_form,
             group=group or None,
             present_tense=present_tense or None,
             past_simple=past_simple or None,
@@ -121,5 +119,5 @@ class VerbProcessor:
             sound=sound_filename,
             tags=tags,
         )
-        # print(f"Processed Verb: {verb.greek_citation}") # Optional: for debugging
+        # print(f"Processed Verb: {verb.greek}") # Optional: for debugging
         return verb, guid_update_item

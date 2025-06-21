@@ -8,7 +8,8 @@ import pandas as pd
 from anki_sync.core.anki import AnkiDeckManager
 from anki_sync.core.gemini_client import GeminiClient
 from anki_sync.core.gsheets import GoogleSheetsManager
-from anki_sync.core.models import VerbConjugation
+from anki_sync.core.models.verb import VerbConjugation
+from anki_sync.core.models.word import Word
 from anki_sync.core.synthesizers.audio_synthesizer import AudioSynthesizer
 
 # Configure basic logging for the script
@@ -84,4 +85,21 @@ def create_verb_deck():
 
 
 if __name__ == "__main__":
-    create_verb_deck()
+    # create_verb_deck()
+
+
+    data = pd.read_csv("words.csv")
+    row = data.iloc[0]
+    w1 = Word.from_dataframe(row)
+    wn = w1.to_note()
+    w2 = Word.from_ankinote(wn)
+
+
+    # sheets = GoogleSheetsManager(os.environ.get("GOOGLE_SHEET_ID", ""))
+    # data = sheets.get_rows("Verbs Conjugated")
+    data = pd.read_csv("verbs.csv")
+    row = data.iloc[0]
+
+    v1 = VerbConjugation.from_dataframe(row)
+    vn = v1.to_note()
+    v2 = VerbConjugation.from_ankinote(vn)

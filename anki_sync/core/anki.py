@@ -5,8 +5,8 @@ from typing import List, Optional, Union
 import pandas as pd
 from genanki import Deck, Model, Note, Package
 
-from .models import Verb, VerbConjugation, Word
-
+from .models.verb import Verb, VerbConjugation
+from .models.word import Word
 
 class AnkiDeckManager:
     """Manages the creation and packaging of Anki decks.
@@ -17,73 +17,8 @@ class AnkiDeckManager:
     """
 
     # --- Word Model Definition ---
-    ANKI_WORD_MODEL_ID = 1607392319  # Keep this consistent for words
-    ANKI_WORD_MODEL_NAME = "Anki-Sync Basic (Eng-Gr with Sound)"
-    ANKI_WORD_MODEL_FIELDS = [
-        {"name": "GUID"},
-        {"name": "English"},
-        {"name": "Greek"},
-        {"name": "Class"},
-        {"name": "Gender"},
-        {"name": "Sound"},  # For the sound file
-    ]
-    ANKI_WORD_MODEL_TEMPLATES = [
-        {
-            "name": "Card 1 (English to Greek)",
-            "qfmt": "{{English}}",
-            "afmt": '{{FrontSide}}<hr id="answer">{{Greek}}<br>{{Sound}}',
-        },
-        {
-            "name": "Card 2 (Greek to English)",
-            "qfmt": "{{Greek}}<br>{{Sound}}",
-            "afmt": '{{FrontSide}}<hr id="answer">{{English}}',
-        },
-    ]
 
     # --- Verb Model Definition ---
-    ANKI_VERB_MODEL_ID = 1607392321  # New Randomly generated ID for verbs
-    ANKI_VERB_MODEL_NAME = "Anki-Sync Verb (Eng-Gr with Sound)"
-    # Updated fields based on new Verb model and sheet structure
-    ANKI_VERB_MODEL_FIELDS = [
-        {"name": "GUID"},
-        {"name": "Greek"},  # Main citation form
-        {"name": "English"},
-        {"name": "Example"},
-        {"name": "Sound"},
-        {"name": "SoundEx"},
-        {"name": "Tense"},
-        {"name": "Person"},
-        {"name": "Number"},
-    ]
-    # Updated template to include a table for tenses
-    ANKI_VERB_MODEL_TEMPLATES = [
-        {
-            "name": "Card 1 (English to Greek Verb)",
-            "qfmt": """
-{{English}}
-<br><small>{{Tense}} {{Person}} person {{Number}}</small>
-""",
-            "afmt": """
-{{FrontSide}}
-<hr id="answer">
-{{Greek}} {{Sound}}<br>{{Example}} {{SoundEx}}
-""",
-        },
-        {
-            "name": "Card 2 (Greek Verb to English)",
-            "qfmt": """
-{{Greek}} {{Sound}}<br>{{Example}} {{SoundEx}}
-""",
-            "afmt": """
-{{FrontSide}}
-<hr id="answer">
-{{English}}
-""",
-        },
-    ]
-
-    # Shared CSS or define ANKI_VERB_MODEL_CSS if different
-    ANKI_SHARED_CSS = ".card { font-family: arial; font-size: 20px; text-align: center; color: black; background-color: white; } .note_type { font-size:0.8em; color:grey; }"
 
     def __init__(self) -> None:
         """Initialize the AnkiDeckManager with note models."""
@@ -114,7 +49,11 @@ class AnkiDeckManager:
         )
 
     def _augment_english_verb_phrase(
-            self, english_phrase: str, tense: str, number: str, person: str,
+        self,
+        english_phrase: str,
+        tense: str,
+        number: str,
+        person: str,
     ) -> str:
         """
         Augments an English verb phrase with subscripts for aspect and number.
@@ -137,7 +76,9 @@ class AnkiDeckManager:
             return english_phrase  # Return original if empty or malformed
 
         middle_part = " ".join(parts[1:-1])
-        return f"{parts[0]}<sup>{number_subscript}</sup> {middle_part} {parts[-1]}<sup>{aspect_subscript}</sup>".replace("  ", " ")
+        return f"{parts[0]}<sup>{number_subscript}</sup> {middle_part} {parts[-1]}<sup>{aspect_subscript}</sup>".replace(
+            "  ", " "
+        )
 
     def _create_deck(self, deck_name: str) -> Deck:
         """Creates a new Anki deck with the given name."""
@@ -162,7 +103,7 @@ class AnkiDeckManager:
     def _create_word_note(self, word: Word, sound_field_value: str) -> Note:
         """Creates an Anki note for a Word object."""
         note_fields = [
-            word.guid,
+            # word.guid,
             word.english,
             word.greek,
             word.word_class or "",
@@ -246,7 +187,9 @@ class AnkiDeckManager:
             sound_field_value = ""
             example_sound_field_value = ""
             if audio_directory:
-                conjugated_path = os.path.join(audio_directory, conjugated_sound.filename)
+                conjugated_path = os.path.join(
+                    audio_directory, conjugated_sound.filename
+                )
                 example_path = os.path.join(audio_directory, example_sound.filename)
                 if os.path.exists(conjugated_path):
                     media_files.append(conjugated_path)

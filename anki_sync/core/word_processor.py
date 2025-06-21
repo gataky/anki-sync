@@ -141,9 +141,7 @@ class WordProcessor:
 
         # Process tags using hierarchical tag system
         # Get all columns from Category onwards
-        category_index = (
-            row.index.get_loc("Category") if "Category" in row.index else -1
-        )
+        category_index = row.index.get_loc("Tag") if "Tag" in row.index else -1
         hierarchical_tag_cells = (
             row.iloc[category_index:].tolist() if category_index >= 0 else []
         )
