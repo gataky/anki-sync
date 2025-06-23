@@ -1,7 +1,7 @@
 from typing import Optional
-import genanki
 
 import attr
+import genanki
 import pandas
 
 from anki_sync.core.models.audio import AudioMeta
@@ -87,7 +87,6 @@ class VerbConjugation(BaseWord):
     verb: str = ""
     audio_filename: str = ""
     tags: list[str] = attr.ib(factory=list)
-
 
     def to_note(self) -> genanki.Note:
         # Create note with the new fields

@@ -1,16 +1,21 @@
+import hashlib
 import io
 import logging
 import os
+import pathlib
 from typing import cast
 
+import genanki
 import pandas as pd
+import ankipandas as ap
 
 from anki_sync.core.anki import AnkiDeckManager
 from anki_sync.core.gemini_client import GeminiClient
 from anki_sync.core.gsheets import GoogleSheetsManager
 from anki_sync.core.models.verb import VerbConjugation
-from anki_sync.core.models.word import Word
+from anki_sync.core.models.noun import Noun
 from anki_sync.core.synthesizers.audio_synthesizer import AudioSynthesizer
+from anki_sync.utils.sql import Database
 
 # Configure basic logging for the script
 logging.basicConfig(
@@ -84,22 +89,46 @@ def create_verb_deck():
     anki.create_verb_deck(data, "Greek Verbs", "verbs.apkg", "./media")
 
 
+class Deck(genanki.Deck):
+
+    def __init__(self, deck_name: str, media_dir: str):
+        deck_id = int(hashlib.md5(deck_name.encode("utf-8")).hexdigest(), 16) % (10**10)
+        super().__init__(deck_id, deck_name)
+        self.media_dir = media_dir
+        self.audio_files = []
+
+    def add_audio(self, audio_filename: str):
+        path = os.path.join(self.media_dir, audio_filename)
+        self.audio_files.append(path)
+
+
 if __name__ == "__main__":
     # create_verb_deck()
 
 
-    data = pd.read_csv("words.csv")
-    row = data.iloc[0]
-    w1 = Word.from_dataframe(row)
-    wn = w1.to_note()
-    w2 = Word.from_ankinote(wn)
-
-
-    # sheets = GoogleSheetsManager(os.environ.get("GOOGLE_SHEET_ID", ""))
-    # data = sheets.get_rows("Verbs Conjugated")
-    data = pd.read_csv("verbs.csv")
+    # from spreadsheet
+    data = pd.read_csv("./scripts/Nouns.csv")
+    data['ID'] = data['ID'].astype(int)
     row = data.iloc[0]
 
-    v1 = VerbConjugation.from_dataframe(row)
-    vn = v1.to_note()
-    v2 = VerbConjugation.from_ankinote(vn)
+    w1 = Noun.from_sheets(row)
+    n1 = w1.to_note()
+
+    # from database
+    db_path = pathlib.Path("/Users/jeff/Library/Application Support/Anki2/test/collection.anki2")
+    db = Database(db_path)
+    c = ap.Collection(db_path)
+    notes = c.notes
+    note = notes[notes["nguid"] == n1.guid]
+    w2 = Noun.from_ankidb(note)
+
+
+    # db.set_note_data(n1)
+
+    # deck = Deck("test", "/Users/jeff/Library/Application Support/Anki2/User 1/collection.media")
+    # deck.add_audio(w1.audio_filename)
+    # deck.add_note(n1)
+    #
+    # p = genanki.Package(deck)
+    # p.media_files = deck.audio_files
+    # p.write_to_file("./test.apkg")

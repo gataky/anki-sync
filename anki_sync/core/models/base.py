@@ -1,7 +1,9 @@
+import json
 import re
 
 import attr
 from genanki import Note
+import pandas
 
 
 class BaseWord:
@@ -22,22 +24,22 @@ class BaseWord:
         cls.__attrs_init__(**init_kwargs)
 
     @classmethod
-    def from_dataframe(cls, df):
+    def from_sheets(cls, df: pandas.DataFrame):
         obj = cls(**df.to_dict())
         obj._post_process_dataframe(df)
         return obj
 
     @classmethod
-    def from_ankinote(cls, note: Note):
-        data = {
-            "GUID": note.guid,
-            "Tags": list(note.tags),
-        }
-        for field in note.model.fields:
-            name = field["name"]
-            indx = field["ord"]
-            data[name] = note.fields[indx]
+    def from_ankidb(cls, note: pandas.DataFrame):
+        data = json.loads(note.ndata.item())
+        data["guid"] = note.nguid.item()
+        data["id"] = note.nid.item()
+
+        # declensions = dict(zip(
+        #     ["n_s", "n_p", "a_s", "a_p", "g_s", "g_p"],
+        #     data["declensions"],
+        # ))
+        # data.update(declensions)
 
         obj = cls(**data)
-        obj._post_process_ankinote(note)
         return obj

@@ -6,7 +6,8 @@ import pandas as pd
 from genanki import Deck, Model, Note, Package
 
 from .models.verb import Verb, VerbConjugation
-from .models.word import Word
+from .models.noun import Noun
+
 
 class AnkiDeckManager:
     """Manages the creation and packaging of Anki decks.
@@ -86,7 +87,7 @@ class AnkiDeckManager:
         return Deck(deck_id, deck_name)
 
     def _process_item_sound_file(
-        self, item: Union[Word, Verb], sound_files_dir: Optional[str]
+        self, item: Union[Noun, Verb], sound_files_dir: Optional[str]
     ) -> tuple[str, List[str]]:
         """Process sound file for an item (Word or Verb) and return the sound field value and media files list."""
         sound_field_value = ""
@@ -100,7 +101,7 @@ class AnkiDeckManager:
                     sound_field_value = f"[sound:{item.sound}]"
         return sound_field_value, media_files
 
-    def _create_word_note(self, word: Word, sound_field_value: str) -> Note:
+    def _create_word_note(self, word: Noun, sound_field_value: str) -> Note:
         """Creates an Anki note for a Word object."""
         note_fields = [
             # word.guid,
@@ -119,7 +120,7 @@ class AnkiDeckManager:
 
     def create_word_deck(
         self,
-        words: List[Word],
+        words: List[Noun],
         deck_name: str,
         output_file: str,
         audio_directory: Optional[str] = None,
