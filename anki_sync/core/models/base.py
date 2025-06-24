@@ -25,21 +25,20 @@ class BaseWord:
 
     @classmethod
     def from_sheets(cls, df: pandas.DataFrame):
-        obj = cls(**df.to_dict())
+        data = df.to_dict()
+        data["guid"] = df.name
+        obj = cls(**data)
         obj._post_process_dataframe(df)
         return obj
 
     @classmethod
     def from_ankidb(cls, note: pandas.DataFrame):
-        data = json.loads(note.ndata.item())
-        data["guid"] = note.nguid.item()
-        data["id"] = note.nid.item()
-
-        # declensions = dict(zip(
-        #     ["n_s", "n_p", "a_s", "a_p", "g_s", "g_p"],
-        #     data["declensions"],
-        # ))
-        # data.update(declensions)
+        data = note.data
+        if not data:
+            return None
+        data = json.loads(data)
+        data["guid"] = note.name
+        data["id"] = int(note.id)
 
         obj = cls(**data)
         return obj

@@ -96,11 +96,11 @@ class Noun(BaseWord):
         self._pp_df_audio(data)
 
     def _pp_df_tags(self, data: pandas.DataFrame):
-        category_index = data.index.get_loc("Tag") if "Tag" in data.index else -1
+        category_index = data.index.get_loc("tag") if "tag" in data.index else -1
         tags = (
             data.iloc[category_index:].tolist() if category_index >= 0 else []
         )
-        self.tags = tags
+        self.tags = list(filter(lambda x: x, tags))
 
     def _pp_df_audio(self, data: pandas.DataFrame):
         self.audio_filename = f"{self.greek}.mp3"

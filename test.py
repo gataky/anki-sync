@@ -7,6 +7,7 @@ from typing import cast
 
 import genanki
 import pandas as pd
+from pandas._libs import pandas
 import ankipandas as ap
 
 from anki_sync.core.anki import AnkiDeckManager
@@ -103,27 +104,106 @@ class Deck(genanki.Deck):
 
 
 if __name__ == "__main__":
-    # create_verb_deck()
+    """
+    1. Get notes from google sheets
+    2. Get notes from anki database
+
+    3. Match notes between the two gnote <-> anote
+        a. match by GUID and fill gnote.id with anote.id
+
+    4. Organize into groups
+        a. gnote | anote : notes exist in both locations
+        b. gnote |   -   : note only exists in google sheets
+        c.   -   | anote : note only exists in anki database
+        d.   -   |   -   : n/a
 
 
-    # from spreadsheet
-    data = pd.read_csv("./scripts/Nouns.csv")
-    data['ID'] = data['ID'].astype(int)
-    row = data.iloc[0]
+    4a. Cases when we have notes in both locations
+        1. anki note has data field
+            a. desired case, we can compare notes
+        2. anki note missing data field
+            a. we take google sheet note as source of truth
+            b. copy data from google sheet note to anki note data field which should, on the
+               next sync, behave like case 1
 
-    w1 = Noun.from_sheets(row)
-    n1 = w1.to_note()
+    """
+    # TODO
+    db_path = pathlib.Path("/Users/jeffor/Library/Application Support/Anki2/User 1/collection.anki2")
 
-    # from database
-    db_path = pathlib.Path("/Users/jeff/Library/Application Support/Anki2/test/collection.anki2")
-    db = Database(db_path)
-    c = ap.Collection(db_path)
-    notes = c.notes
-    note = notes[notes["nguid"] == n1.guid]
-    w2 = Noun.from_ankidb(note)
+    def get_notes_from_google_sheets(source="remote") -> pandas.DataFrame:
+        if source == "remote":
+            gsheet = GoogleSheetsManager(os.environ.get("GOOGLE_SHEET_ID", ""))
+            data = gsheet.get_rows("nouns")
+        else:
+            data = pd.read_csv("gnotes.csv")
+            data = data.drop(columns="Unnamed: 0")
+
+        for col in ["tag", "sub tag 1", "sub tag 2"]:
+            data[col] = data[col].fillna("")
+        return data
 
 
-    # db.set_note_data(n1)
+    def get_notes_from_anki_database(source="remote") -> pandas.DataFrame:
+        if source == "remote":
+            # TODO
+            db = Database(db_path)
+            return db.get_notes()
+        else:
+            data = pd.read_csv("anotes.csv")
+            data = data.set_index("id")
+
+        return data
+
+
+    def group_notes(gnotes: pandas.DataFrame, anotes: pandas.DataFrame) -> dict[str, set[str]]:
+
+        gnote_guids: set[str] = set(gnotes["guid"])
+        anote_guids: set[str] = set(anotes["guid"])
+
+        in_both = gnote_guids.intersection(anote_guids)
+        only_g = gnote_guids.difference(anote_guids)
+        only_a = anote_guids.difference(gnote_guids)
+
+        groupings = {
+            "in_both": in_both,
+            "only_google_sheets": only_g,
+            "only_anki_database": only_a,
+        }
+
+        return groupings
+
+
+
+    # gnotes = get_notes_from_google_sheets()
+    # anotes = get_notes_from_anki_database()
+
+    gnotes = get_notes_from_google_sheets()
+    anotes = get_notes_from_anki_database()
+
+    groups = group_notes(gnotes, anotes)
+
+    # sync note id from anki to google sheet note.
+    antoes_by_guid = anotes.reset_index().set_index("guid")
+    gnotes_by_guid = gnotes.reset_index().set_index("guid")
+    notes = []
+    for guid in groups.get("in_both", {}):
+        # get both notes by their guids
+        gnote = gnotes_by_guid.loc[guid]
+        anote = antoes_by_guid.loc[guid]
+
+        # populate the google sheet note with the note id from anki
+        g = Noun.from_sheets(gnote)
+        g.id = int(anote.id)
+
+        # create the anki note from the data field in the database
+        a = Noun.from_ankidb(anote)
+
+        notes.append((g, a))
+
+
+
+
+
 
     # deck = Deck("test", "/Users/jeff/Library/Application Support/Anki2/User 1/collection.media")
     # deck.add_audio(w1.audio_filename)
