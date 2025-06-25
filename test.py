@@ -130,16 +130,17 @@ if __name__ == "__main__":
     # TODO
     db_path = pathlib.Path("/Users/jeff/Library/Application Support/Anki2/test/collection.anki2")
 
-    def get_notes_from_google_sheets(source="remote") -> pandas.DataFrame:
+    def get_notes_from_google_sheets(sheet: str, source: str="remote") -> pandas.DataFrame:
         if source == "remote":
             gsheet = GoogleSheetsManager(os.environ.get("GOOGLE_SHEET_ID", ""))
-            data = gsheet.get_rows("nouns")
+            data = gsheet.get_rows(sheet)
         else:
             data = pd.read_csv("gnotes.csv")
             data = data.drop(columns="Unnamed: 0")
 
-        for col in ["tag", "sub tag 1", "sub tag 2"]:
-            data[col] = data[col].fillna("")
+        if sheet == "nouns":
+            for col in ["tag", "sub tag 1", "sub tag 2"]:
+                data[col] = data[col].fillna("")
         return data
 
 
@@ -172,13 +173,15 @@ if __name__ == "__main__":
 
         return groupings
 
+    for sheet in ["nouns", "adjectives", "verbs", "verbs conjugated"]:
+        gnotes = get_notes_from_google_sheets(sheet)
+        gnotes.to_csv(f"./data/{sheet}.csv")
 
+    raise
 
-    # gnotes = get_notes_from_google_sheets()
-    # anotes = get_notes_from_anki_database()
-
-    gnotes = get_notes_from_google_sheets()
     anotes = get_notes_from_anki_database()
+
+
 
     groups = group_notes(gnotes, anotes)
 
