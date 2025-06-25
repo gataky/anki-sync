@@ -1,5 +1,32 @@
 import genanki
 
+class Card(genanki.Card):
+  def __init__(self, ord, suspend=False):
+      self.ord = ord
+      self.suspend = suspend
+
+  def write_to_db(self, cursor, timestamp: float, deck_id, note_id, id_gen, due=0):
+      queue = -1 if self.suspend else 0
+      cursor.execute('INSERT INTO cards VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);', (
+          next(id_gen),    # id
+          note_id,         # nid
+          deck_id,         # did
+          self.ord,        # ord
+          int(timestamp),  # mod
+          -1,              # usn
+          0,               # type (=0 for non-Cloze)
+          queue,           # queue
+          due,             # due
+          0,               # ivl
+          0,               # factor
+          0,               # reps
+          0,               # lapses
+          0,               # left
+          0,               # odue
+          0,               # odid
+          0,               # flags
+          "",              # data
+      ))
 
 class Note(genanki.Note):
 
@@ -34,4 +61,13 @@ class Note(genanki.Note):
 
         note_id = cursor.lastrowid
         for card in self.cards:
-          card.write_to_db(cursor, timestamp, deck_id, note_id, id_gen, self.due)
+            card.write_to_db(cursor, timestamp, deck_id, note_id, id_gen, self.due)
+
+    def _front_back_cards(self):
+        """Create Front/Back cards"""
+        rv = []
+        for card_ord, any_or_all, required_field_ords in self.model._req:
+            op = {'any': any, 'all': all}[any_or_all]
+            if op(self.fields[ord_] for ord_ in required_field_ords):
+                rv.append(Card(card_ord))
+        return rv

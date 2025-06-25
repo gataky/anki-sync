@@ -128,7 +128,7 @@ if __name__ == "__main__":
 
     """
     # TODO
-    db_path = pathlib.Path("/Users/jeffor/Library/Application Support/Anki2/User 1/collection.anki2")
+    db_path = pathlib.Path("/Users/jeff/Library/Application Support/Anki2/test/collection.anki2")
 
     def get_notes_from_google_sheets(source="remote") -> pandas.DataFrame:
         if source == "remote":
