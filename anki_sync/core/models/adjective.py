@@ -8,20 +8,20 @@ from anki_sync.core.models.audio import AudioMeta
 from anki_sync.core.models.base import BaseWord
 from anki_sync.core.models.note import Note
 from anki_sync.utils.guid import generate_guid
-from anki_sync.utils.html import create_declension_table_for_noun
+from anki_sync.utils.html import create_declension_table_for_adj
 from anki_sync.utils.sql import AnkiDatabase
 
-ANKI_SHARED_CSS = ".card { font-family: arial; font-size: 20px; text-align: center; color: black; background-color: white; } .note_type { font-size:0.8em; color:grey; } .table-centered { margin-left: auto; margin-right: auto; }"
+ANKI_SHARED_CSS = ".card { font-family: arial; font-size: 20px; text-align: center; color: black; background-color: white; } .note_type { font-size:0.8em; color:grey; }"
 
-ANKI_NOUN_MODEL_ID = 1000000000  # Keep this consistent for words
-ANKI_NOUN_MODEL_NAME = "greek noun"
-ANKI_NOUN_MODEL_FIELDS = [
+ANKI_ADJ_MODEL_ID = 1000000001  # Keep this consistent for words
+ANKI_ADJ_MODEL_NAME = "greek adjective"
+ANKI_ADJ_MODEL_FIELDS = [
     {"name": "english"},
     {"name": "greek"},
     {"name": "audio filename"},
     {"name": "declension table"},
 ]
-ANKI_NOUN_MODEL_TEMPLATES = [
+ANKI_ADJ_MODEL_TEMPLATES = [
     {
         "name": "Card 1 (English to Greek)",
         "qfmt": "{{english}}",
@@ -34,15 +34,15 @@ ANKI_NOUN_MODEL_TEMPLATES = [
     },
 ]
 
-NOUN_MODEL_FIELDS = [
+ADJ_MODEL_FIELDS = [
     {"name": field["name"], "ord": idx}
-    for idx, field in enumerate(ANKI_NOUN_MODEL_FIELDS)
+    for idx, field in enumerate(ANKI_ADJ_MODEL_FIELDS)
 ]
-NOUN_MODEL = genanki.Model(
-    ANKI_NOUN_MODEL_ID,
-    ANKI_NOUN_MODEL_NAME,
-    fields=NOUN_MODEL_FIELDS,
-    templates=ANKI_NOUN_MODEL_TEMPLATES,
+ADJ_MODEL = genanki.Model(
+    ANKI_ADJ_MODEL_ID,
+    ANKI_ADJ_MODEL_NAME,
+    fields=ADJ_MODEL_FIELDS,
+    templates=ANKI_ADJ_MODEL_TEMPLATES,
     css=ANKI_SHARED_CSS,
 )
 
@@ -57,39 +57,45 @@ class Noun(BaseWord):
 
     # Fields with defaults
     audio_filename: str = ""
-    declension_table: str = ""
     tags: list[str] = attr.ib(factory=list)
 
     guid: str = attr.ib(factory=lambda: generate_guid(10))
     id: int | None = None
-    n_s: str = "-"
-    n_p: str = "-"
-    a_s: str = "-"
-    a_p: str = "-"
-    g_s: str = "-"
-    g_p: str = "-"
+    declension_table: str = ""
 
-    _gender_mapping = {
-        "masculine": "ο",
-        "feminine": "η",
-        "neuter": "το",
-    }
+    n_s_m: str = "-"
+    n_s_f: str = "-"
+    n_s_n: str = "-"
+    n_p_m: str = "-"
+    n_p_f: str = "-"
+    n_p_n: str = "-"
+    a_s_m: str = "-"
+    a_s_f: str = "-"
+    a_s_n: str = "-"
+    a_p_m: str = "-"
+    a_p_f: str = "-"
+    a_p_n: str = "-"
+    g_s_m: str = "-"
+    g_s_f: str = "-"
+    g_s_n: str = "-"
+    g_p_m: str = "-"
+    g_p_f: str = "-"
+    g_p_n: str = "-"
 
     def get_audio_meta(self) -> AudioMeta:
         return AudioMeta(phrase=self.greek, filename=self.audio)
 
     def to_note(self, old_db_conn: AnkiDatabase) -> Note:
         self.id = old_db_conn.get_note_id_by_guid(self.guid)
-        article = self._gender_mapping.get(self.gender, "")
 
         note_fields = [
             self.english,
-            f"{article} {self.greek}",
+            self.greek,
             f"[sound:{self.audio_filename}]",
-            self.generate_declension_table()
+            self.declension_table,
         ]
         return Note(
-            model=NOUN_MODEL,
+            model=ADJ_MODEL,
             guid=self.guid,
             id=self.id,
             fields=note_fields,
@@ -124,22 +130,35 @@ class Noun(BaseWord):
 
     def generate_declension_table(self):
         data = [
-            [ self.n_s, self.n_p, self.a_s, self.a_p, self.g_s, self.g_p ]
+            [ self.n_s_m, self.n_p_m, self.a_s_m, self.a_p_m, self.g_s_m, self.g_p_m ],
+            [ self.n_s_f, self.n_p_f, self.a_s_f, self.a_p_f, self.g_s_f, self.g_p_f ],
+            [ self.n_s_n, self.n_p_n, self.a_s_n, self.a_p_n, self.g_s_n, self.g_p_n ],
         ]
-        return create_declension_table_for_noun(data)
+        self.declension_table = create_declension_table_for_adj(data)
 
     def generate_note_meta(self) -> str:
         meta = {
             "english": self.english,
             "greek": self.greek,
-            "gender": self.gender,
             "tags": self.tags,
-            "n_s": self.n_s,
-            "n_p": self.n_p,
-            "a_s": self.a_s,
-            "a_p": self.a_p,
-            "g_s": self.g_s,
-            "g_p": self.g_p,
+            "n_s_m": self.n_s_m,
+            "n_s_f": self.n_s_f,
+            "n_s_n": self.n_s_n,
+            "n_p_m": self.n_p_m,
+            "n_p_f": self.n_p_f,
+            "n_p_n": self.n_p_n,
+            "a_s_m": self.a_s_m,
+            "a_s_f": self.a_s_f,
+            "a_s_n": self.a_s_n,
+            "a_p_m": self.a_p_m,
+            "a_p_f": self.a_p_f,
+            "a_p_n": self.a_p_n,
+            "g_s_m": self.g_s_m,
+            "g_s_f": self.g_s_f,
+            "g_s_n": self.g_s_n,
+            "g_p_m": self.g_p_m,
+            "g_p_f": self.g_p_f,
+            "g_p_n": self.g_p_n,
             "audio_filename": self.audio_filename,
         }
 

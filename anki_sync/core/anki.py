@@ -5,8 +5,8 @@ from typing import List, Optional, Union
 import pandas as pd
 from genanki import Deck, Model, Note, Package
 
-from .models.verb import Verb, VerbConjugation
 from .models.noun import Noun
+from .models.verb import Verb, VerbConjugation
 
 
 class AnkiDeckManager:

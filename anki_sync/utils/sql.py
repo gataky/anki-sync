@@ -1,9 +1,10 @@
-import sqlite3
+import time
+import itertools
 import pathlib
-import pandas as pd
+import sqlite3
 from enum import Enum
 
-from anki_sync.core.models.note import Note
+import pandas as pd
 
 
 class Table(Enum):
@@ -12,18 +13,21 @@ class Table(Enum):
     REVLOG = "revlog"
 
 
-class Database:
+class AnkiDatabase:
 
-    def __init__(self, path: str):
-        self.path: pathlib.Path = pathlib.Path(path)
+    def __init__(self, path: pathlib.Path):
+        self.path = path
         self.conn: sqlite3.Connection | None = None
+        self.id_gen = itertools.count(int(time.time() * 1000))
 
         if not self.path.is_file():
-            raise FileNotFoundError(f"file not found: {self.path.absolute()}")
+            raise FileNotFoundError(f"file not found: {self.path.resolve()}")
+
+        self.conn = sqlite3.connect(self.path.resolve())
 
     def __enter__(self) -> sqlite3.Connection:
         self.conn = sqlite3.connect(self.path.resolve())
-        return self.conn
+        return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if self.conn:
@@ -31,26 +35,42 @@ class Database:
                 self.conn.rollback()
             else:
                 self.conn.commit()
-            self.conn.close()
+            self.close()
+
+    def close(self):
+        self.conn.close()
 
     def get_notes(self) -> pd.DataFrame:
         return self._get_table(Table.NOTES)
 
-    def set_note_data(self, note: Note):
-        with self as conn:
-            conn.execute(
-                "UPDATE notes SET data = ? WHERE id = ?",
-                (note.data, note.id)
-            )
-
     def get_cards(self) -> pd.DataFrame:
         return self._get_table(Table.Table)
+
+    def get_cards_by_note_id(self, note_id: int) -> pd.DataFrame:
+        query = "SELECT * FROM cards WHERE nid = ? ORDER BY ord"
+        return self.execute(query, (note_id,))
 
     def get_revlog(self) -> pd.DataFrame:
         return self._get_table(Table.REVLOG)
 
+    def get_revlog_by_card_id(self, card_id: int) -> pd.DataFrame:
+        query = "SELECT * FROM revlog WHERE cid = ?"
+        return self.execute(query, (card_id,))
+
+    def get_note_id_by_guid(self, guid: str) -> int:
+        query = "SELECT id FROM notes WHERE guid = ?"
+        row = self.execute(query, (guid,))
+        if len(row) == 0:
+            id = next(self.id_gen)
+        else:
+            id = row["id"].item()
+        return id
+
     def _get_table(self, table: Table) -> pd.DataFrame:
-        with self as conn:
-            notes = pd.read_sql(f"SELECT * FROM {table.value}", conn)
-            notes.set_index("id", inplace=True)
+        query = f"SELECT * FROM {table.value}"
+        notes = self.execute(query)
+        notes.set_index("id", inplace=True)
         return notes
+
+    def execute(self, query, params=None) -> pd.DataFrame:
+        return pd.read_sql(query, self.conn, params=params)

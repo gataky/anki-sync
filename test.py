@@ -8,21 +8,28 @@ from typing import cast
 import genanki
 import pandas as pd
 from pandas._libs import pandas
-import ankipandas as ap
 
 from anki_sync.core.anki import AnkiDeckManager
 from anki_sync.core.gemini_client import GeminiClient
 from anki_sync.core.gsheets import GoogleSheetsManager
-from anki_sync.core.models.verb import VerbConjugation
 from anki_sync.core.models.noun import Noun
+from anki_sync.core.models.verb import VerbConjugation
 from anki_sync.core.synthesizers.audio_synthesizer import AudioSynthesizer
-from anki_sync.utils.sql import Database
+from anki_sync.utils.sql import AnkiDatabase
 
 # Configure basic logging for the script
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(name)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
+
+USER = "User 1"
+ANKI_PATH = pathlib.Path(
+    f"{os.environ.get("HOME")}/Library/Application Support/Anki2/{USER}"
+)
+ANKI_DB_PATH = pathlib.Path(os.path.join(ANKI_PATH, "collection.anki2"))
+ANKI_MEDIA_PATH = pathlib.Path(os.path.join(ANKI_PATH, "collection.media"))
+
 
 
 # --- Configuration ---
@@ -103,115 +110,95 @@ class Deck(genanki.Deck):
         self.audio_files.append(path)
 
 
+"""
+1. Get notes from google sheets
+2. Get notes from anki database
+
+3. Match notes between the two gnote <-> anote
+    a. match by GUID and fill gnote.id with anote.id
+
+4. Organize into groups
+    a. gnote | anote : notes exist in both locations
+    b. gnote |   -   : note only exists in google sheets
+    c.   -   | anote : note only exists in anki database
+    d.   -   |   -   : n/a
+
+
+4a. Cases when we have notes in both locations
+    1. anki note has data field
+        a. desired case, we can compare notes
+    2. anki note missing data field
+        a. we take google sheet note as source of truth
+        b. copy data from google sheet note to anki note data field which should, on the
+           next sync, behave like case 1
+
+"""
+
+def get_notes_from_google_sheets(
+    sheet: str, source: str = "remote"
+) -> pandas.DataFrame:
+    if source == "remote":
+        gsheet = GoogleSheetsManager(os.environ.get("GOOGLE_SHEET_ID", ""))
+        data = gsheet.get_rows(sheet)
+    else:
+        data = pd.read_csv("./data/nouns.csv")
+        data = data.drop(columns="Unnamed: 0")
+
+    if sheet == "nouns":
+        for col in ["tag", "sub tag 1", "sub tag 2"]:
+            data[col] = data[col].fillna("")
+    return data
+
+def get_notes_from_anki_database(table: str, source="remote") -> pandas.DataFrame:
+    if source == "remote":
+        with AnkiDatabase(ANKI_DB_PATH) as db:
+            return getattr(db, f"get_{table}")()
+    else:
+        data = pd.read_csv("anotes.csv")
+        data = data.set_index("id")
+
+    return data
+
+def group_notes(
+    gnotes: pandas.DataFrame, anotes: pandas.DataFrame
+) -> dict[str, set[str]]:
+
+    gnote_guids: set[str] = set(gnotes["guid"])
+    anote_guids: set[str] = set(anotes["guid"])
+
+    in_both = gnote_guids.intersection(anote_guids)
+    only_g = gnote_guids.difference(anote_guids)
+    only_a = anote_guids.difference(gnote_guids)
+
+    groupings = {
+        "in_both": in_both,
+        "only_google_sheets": only_g,
+        "only_anki_database": only_a,
+    }
+
+    return groupings
+
+
 if __name__ == "__main__":
-    """
-    1. Get notes from google sheets
-    2. Get notes from anki database
 
-    3. Match notes between the two gnote <-> anote
-        a. match by GUID and fill gnote.id with anote.id
-
-    4. Organize into groups
-        a. gnote | anote : notes exist in both locations
-        b. gnote |   -   : note only exists in google sheets
-        c.   -   | anote : note only exists in anki database
-        d.   -   |   -   : n/a
-
-
-    4a. Cases when we have notes in both locations
-        1. anki note has data field
-            a. desired case, we can compare notes
-        2. anki note missing data field
-            a. we take google sheet note as source of truth
-            b. copy data from google sheet note to anki note data field which should, on the
-               next sync, behave like case 1
-
-    """
-    # TODO
-    db_path = pathlib.Path("/Users/jeff/Library/Application Support/Anki2/test/collection.anki2")
-
-    def get_notes_from_google_sheets(sheet: str, source: str="remote") -> pandas.DataFrame:
-        if source == "remote":
-            gsheet = GoogleSheetsManager(os.environ.get("GOOGLE_SHEET_ID", ""))
-            data = gsheet.get_rows(sheet)
-        else:
-            data = pd.read_csv("gnotes.csv")
-            data = data.drop(columns="Unnamed: 0")
-
-        if sheet == "nouns":
-            for col in ["tag", "sub tag 1", "sub tag 2"]:
-                data[col] = data[col].fillna("")
-        return data
-
-
-    def get_notes_from_anki_database(source="remote") -> pandas.DataFrame:
-        if source == "remote":
-            # TODO
-            db = Database(db_path)
-            return db.get_notes()
-        else:
-            data = pd.read_csv("anotes.csv")
-            data = data.set_index("id")
-
-        return data
-
-
-    def group_notes(gnotes: pandas.DataFrame, anotes: pandas.DataFrame) -> dict[str, set[str]]:
-
-        gnote_guids: set[str] = set(gnotes["guid"])
-        anote_guids: set[str] = set(anotes["guid"])
-
-        in_both = gnote_guids.intersection(anote_guids)
-        only_g = gnote_guids.difference(anote_guids)
-        only_a = anote_guids.difference(gnote_guids)
-
-        groupings = {
-            "in_both": in_both,
-            "only_google_sheets": only_g,
-            "only_anki_database": only_a,
-        }
-
-        return groupings
-
-    for sheet in ["nouns", "adjectives", "verbs", "verbs conjugated"]:
-        gnotes = get_notes_from_google_sheets(sheet)
-        gnotes.to_csv(f"./data/{sheet}.csv")
-
-    raise
-
-    anotes = get_notes_from_anki_database()
-
-
-
+    gnotes = get_notes_from_google_sheets("nouns", source="csv")
+    anotes = get_notes_from_anki_database("notes")
     groups = group_notes(gnotes, anotes)
 
-    # sync note id from anki to google sheet note.
-    antoes_by_guid = anotes.reset_index().set_index("guid")
     gnotes_by_guid = gnotes.reset_index().set_index("guid")
-    notes = []
-    for guid in groups.get("in_both", {}):
-        # get both notes by their guids
-        gnote = gnotes_by_guid.loc[guid]
-        anote = antoes_by_guid.loc[guid]
 
-        # populate the google sheet note with the note id from anki
-        g = Noun.from_sheets(gnote)
-        g.id = int(anote.id)
+    with AnkiDatabase(ANKI_DB_PATH) as anki_db:
 
-        # create the anki note from the data field in the database
-        a = Noun.from_ankidb(anote)
+        deck = Deck("Greek", ANKI_MEDIA_PATH)
 
-        notes.append((g, a))
+        for idx, row in gnotes.iterrows():
+            gnoun = Noun.from_sheets(row)
+            anote = gnoun.to_note(anki_db)
+            # anote.attach_anki_db(anki_db)
 
+            deck.add_audio(gnoun.audio_filename)
+            deck.add_note(anote)
 
-
-
-
-
-    # deck = Deck("test", "/Users/jeff/Library/Application Support/Anki2/User 1/collection.media")
-    # deck.add_audio(w1.audio_filename)
-    # deck.add_note(n1)
-    #
-    # p = genanki.Package(deck)
-    # p.media_files = deck.audio_files
-    # p.write_to_file("./test.apkg")
+        p = genanki.Package(deck)
+        p.media_files = deck.audio_files
+        p.write_to_file("./test.apkg")

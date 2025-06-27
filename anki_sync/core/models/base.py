@@ -2,7 +2,6 @@ import json
 import re
 
 import attr
-from genanki import Note
 import pandas
 
 
@@ -26,7 +25,7 @@ class BaseWord:
     @classmethod
     def from_sheets(cls, df: pandas.DataFrame):
         data = df.to_dict()
-        data["guid"] = df.name
+        data["guid"] = df.guid
         obj = cls(**data)
         obj._post_process_dataframe(df)
         return obj

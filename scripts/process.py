@@ -1,18 +1,24 @@
-import os
 import itertools
+import os
+
 import modern_greek_inflexion as mgi
 
 from anki_sync.core.gsheets import GoogleSheetsManager
 
 gsheets = GoogleSheetsManager(os.environ.get("GOOGLE_SHEET_ID"))
 
+
 def download_sheets():
     sheets = [
-        "Nouns", "Adjectives", "Verbs", "Verbs Conjugated",
+        "Nouns",
+        "Adjectives",
+        "Verbs",
+        "Verbs Conjugated",
     ]
     for sheet in sheets:
         data = gsheets.get_rows(sheet)
         data.to_csv(f"{sheet}.csv")
+
 
 def extract_declensions(data):
     l = []
@@ -23,18 +29,19 @@ def extract_declensions(data):
             l.extend(list(v))
     return l
 
+
 def get_stem(forms):
     iter = itertools.zip_longest(*forms, fillvalue="")
     common = list(map(lambda x: all(x), iter))
     try:
-        end = common.index(False)-1
+        end = common.index(False) - 1
     except ValueError:
         end = len(common)
     return forms[0][:end]
 
+
 def process_nouns():
     pass
-
 
 
 def process_adjectives():
@@ -54,14 +61,12 @@ def process_adjectives():
             "pl.masc.nom",
             "pl.fem.nom",
             "pl.neut.nom",
-
             "sg.masc.acc",
             "sg.fem.acc",
             "sg.neut.acc",
             "pl.masc.acc",
             "pl.fem.acc",
             "pl.neut.acc",
-
             "sg.masc.gen",
             "sg.fem.gen",
             "sg.neut.gen",
@@ -78,7 +83,7 @@ def process_adjectives():
             ending = w.replace(stem, "")
             endings.append(ending)
 
-        lines.append( ",".join(endings))
+        lines.append(",".join(endings))
 
     return lines
 
@@ -101,7 +106,7 @@ def process_nouns():
         word = row["Greek"]
         gend = gen_map[row["Gender"]]
 
-        if word == 'χείλια':
+        if word == "χείλια":
             gend = "fem"
         if word == "δόντια":
             gend = "fem"
@@ -122,10 +127,8 @@ def process_nouns():
         order = [
             "sg.nom",
             "pl.nom",
-
             "sg.acc",
             "pl.acc",
-
             "sg.gen",
             "pl.gen",
         ]
@@ -139,7 +142,7 @@ def process_nouns():
                 w: str = list(declension)[0]
             except IndexError:
                 w = ""
-            ending = w[len(stem):]
+            ending = w[len(stem) :]
             endings.append(ending)
 
         lines.append(",".join(endings))
