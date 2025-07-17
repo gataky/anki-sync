@@ -13,7 +13,7 @@ from anki_sync.utils.sql import AnkiDatabase
 
 ANKI_SHARED_CSS = ".card { font-family: arial; font-size: 20px; text-align: center; color: black; background-color: white; } .note_type { font-size:0.8em; color:grey; }"
 
-ANKI_ADJ_MODEL_ID = 1000000001  # Keep this consistent for words
+ANKI_ADJ_MODEL_ID = 1607392323  # Keep this consistent for words
 ANKI_ADJ_MODEL_NAME = "greek adjective"
 ANKI_ADJ_MODEL_FIELDS = [
     {"name": "english"},
@@ -48,12 +48,11 @@ ADJ_MODEL = genanki.Model(
 
 
 @attr.s(auto_attribs=True, init=False)
-class Noun(BaseWord):
+class Adjective(BaseWord):
 
     # Required fields
     english: str
     greek: str
-    gender: str
 
     # Fields with defaults
     audio_filename: str = ""
@@ -83,16 +82,18 @@ class Noun(BaseWord):
     g_p_n: str = "-"
 
     def get_audio_meta(self) -> AudioMeta:
-        return AudioMeta(phrase=self.greek, filename=self.audio)
+        return AudioMeta(phrase=self.greek, filename=self.audio_filename)
 
     def to_note(self, old_db_conn: AnkiDatabase) -> Note:
-        self.id = old_db_conn.get_note_id_by_guid(self.guid)
+        self.id, self._exists_in_anki = old_db_conn.get_note_id_by_guid(self.guid)
+        if self._exists_in_anki is False:
+            self.guid = generate_guid()
 
         note_fields = [
             self.english,
             self.greek,
             f"[sound:{self.audio_filename}]",
-            self.declension_table,
+            self.generate_declension_table(),
         ]
         return Note(
             model=ADJ_MODEL,
@@ -100,19 +101,18 @@ class Noun(BaseWord):
             id=self.id,
             fields=note_fields,
             tags=self.generate_note_tags(),
-            data=self.generate_note_meta(),
             old_db_conn=old_db_conn,
         )
 
     def _post_process_dataframe(self, data: pandas.DataFrame):
         data = data.fillna("")
-        self._pp_df_tags(data)
+        # self._pp_df_tags(data)
         self._pp_df_audio(data)
 
-    def _pp_df_tags(self, data: pandas.DataFrame):
-        category_index = data.index.get_loc("tag") if "tag" in data.index else -1
-        tags = data.iloc[category_index:].tolist() if category_index >= 0 else []
-        self.tags = list(filter(lambda x: x, tags))
+    # def _pp_df_tags(self, data: pandas.DataFrame):
+    #     category_index = data.index.get_loc("tag") if "tag" in data.index else -1
+    #     tags = data.iloc[category_index:].tolist() if category_index >= 0 else []
+    #     self.tags = list(filter(lambda x: x, tags))
 
     def _pp_df_audio(self, data: pandas.DataFrame):
         self.audio_filename = f"{self.greek}.mp3"
@@ -130,11 +130,12 @@ class Noun(BaseWord):
 
     def generate_declension_table(self):
         data = [
-            [ self.n_s_m, self.n_p_m, self.a_s_m, self.a_p_m, self.g_s_m, self.g_p_m ],
-            [ self.n_s_f, self.n_p_f, self.a_s_f, self.a_p_f, self.g_s_f, self.g_p_f ],
-            [ self.n_s_n, self.n_p_n, self.a_s_n, self.a_p_n, self.g_s_n, self.g_p_n ],
+            [self.n_s_m, self.n_p_m, self.a_s_m, self.a_p_m, self.g_s_m, self.g_p_m],
+            [self.n_s_f, self.n_p_f, self.a_s_f, self.a_p_f, self.g_s_f, self.g_p_f],
+            [self.n_s_n, self.n_p_n, self.a_s_n, self.a_p_n, self.g_s_n, self.g_p_n],
         ]
         self.declension_table = create_declension_table_for_adj(data)
+        return self.declension_table
 
     def generate_note_meta(self) -> str:
         meta = {

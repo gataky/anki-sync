@@ -1,4 +1,5 @@
 import os
+import pathlib
 from typing import Literal, Optional
 
 from .base import BaseSynthesizer
@@ -16,7 +17,7 @@ class AudioSynthesizer:
 
     def __init__(
         self,
-        output_directory: str,
+        output_directory: pathlib.Path,
         synthesizer_type: Literal["elevenlabs", "google"] = "elevenlabs",
     ):
         """Initialize the audio synthesizer.
@@ -64,7 +65,5 @@ class AudioSynthesizer:
             try:
                 self.synthesizer.synthesize(phrase, full_sound_path)
                 print(f"generating new audio {phrase}")
-            except Exception as e:
-                raise e
-        else:
-            print(f"audio exists for {phrase}")
+            except Exception:
+                print(f"failed to generate new audio for {phrase}")

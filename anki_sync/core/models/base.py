@@ -1,5 +1,6 @@
 import json
 import re
+from typing import Hashable
 
 import attr
 import pandas
@@ -9,6 +10,8 @@ class BaseWord:
     filename_re = re.compile(r"\[sound:(?P<filename>.*)\]")
 
     def __init__(self, **kwargs):
+        self._exists_in_anki: bool = False
+        self._google_sheet_cell: str = ""
         self.init(self, **kwargs)
 
     @staticmethod
@@ -23,11 +26,13 @@ class BaseWord:
         cls.__attrs_init__(**init_kwargs)
 
     @classmethod
-    def from_sheets(cls, df: pandas.DataFrame):
+    def from_sheets(cls, row: tuple[Hashable, pandas.Series]):
+        index, df = row
         data = df.to_dict()
         data["guid"] = df.guid
         obj = cls(**data)
         obj._post_process_dataframe(df)
+        obj._google_sheet_cell = f"A{index+2}"
         return obj
 
     @classmethod
@@ -41,3 +46,9 @@ class BaseWord:
 
         obj = cls(**data)
         return obj
+
+    def _post_process_dataframe(self, *args):
+        pass
+
+    def exists_in_anki(self):
+        return self._exists_in_anki

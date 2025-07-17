@@ -1,5 +1,6 @@
 import pandas as pd
 
+
 def create_declension_table_for_adj(declensions):
     # 1. Define row index (as a list)
     index_labels = ["m", "f", "n"]
@@ -18,7 +19,7 @@ def create_declension_table_for_adj(declensions):
             multi_index_tuples.append((section, sub))
 
     # Create the Pandas MultiIndex object
-    columns = pd.MultiIndex.from_tuples(multi_index_tuples, names=['case', 'number'])
+    columns = pd.MultiIndex.from_tuples(multi_index_tuples, names=["case", "number"])
 
     # 3. Populate data
     # The data should be a list of lists (or a NumPy array) where
@@ -31,7 +32,7 @@ def create_declension_table_for_adj(declensions):
     # Generate the HTML table string
     # .to_html() method generates a complete HTML table
     # You can add styling classes using the 'classes' argument if needed
-    html_table = df.to_html(classes=['table', 'table-striped', 'table-bordered'])
+    html_table = df.to_html(classes=["table", "table-striped", "table-bordered"])
     return html_table
 
 
@@ -53,7 +54,7 @@ def create_declension_table_for_noun(declensions):
             multi_index_tuples.append((section, sub))
 
     # Create the Pandas MultiIndex object
-    columns = pd.MultiIndex.from_tuples(multi_index_tuples, names=['case', 'number'])
+    columns = pd.MultiIndex.from_tuples(multi_index_tuples, names=["case", "number"])
 
     # Create the Pandas DataFrame
     df = pd.DataFrame(declensions, index=index_labels, columns=columns)
@@ -61,5 +62,7 @@ def create_declension_table_for_noun(declensions):
     # Generate the HTML table string
     # .to_html() method generates a complete HTML table
     # You can add styling classes using the 'classes' argument if needed
-    html_table = df.to_html(classes=['table', 'table-striped', 'table-bordered', 'table-centered'])
+    html_table = df.to_html(
+        classes=["table", "table-striped", "table-bordered", "table-centered"]
+    )
     return html_table

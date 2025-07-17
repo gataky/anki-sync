@@ -7,6 +7,7 @@ from cached_property import cached_property
 
 from anki_sync.utils.sql import AnkiDatabase
 
+
 class Rev:
     order = ["id", "cid", "usn", "ease", "ivl", "lastIvl", "factor", "time", "type"]
 
@@ -98,13 +99,15 @@ class Note(genanki.Note):
         # if we can't find card data in the old database this means
         # we don't have a note generated in anki yet.  Let the normal
         # flow of genanki take over and create a new card
-        if len(card_data) == 0:
-            return self._front_back_cards()
-        else:
-            self._cards = []
-            for idx, data in card_data.iterrows():
-                self._cards.append(Card(data, self.old_db_conn))
-            return self._cards
+
+        # if len(card_data) == 0:
+        #     return self._front_back_cards()
+        # else:
+
+        self._cards = []
+        for idx, data in card_data.iterrows():
+            self._cards.append(Card(data, self.old_db_conn))
+        return self._cards
 
     def write_to_db(self, new_db_conn: sqlite3.Connection, *args):
         deck_id = args[1]

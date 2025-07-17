@@ -1,17 +1,19 @@
-import hashlib
 import io
 import logging
 import os
 import pathlib
-from typing import cast
+from typing import Literal, cast
 
+import attr
 import genanki
 import pandas as pd
 from pandas._libs import pandas
 
-from anki_sync.core.anki import AnkiDeckManager
 from anki_sync.core.gemini_client import GeminiClient
 from anki_sync.core.gsheets import GoogleSheetsManager
+from anki_sync.core.models.adjective import Adjective
+from anki_sync.core.models.base import BaseWord
+from anki_sync.core.models.deck import Deck
 from anki_sync.core.models.noun import Noun
 from anki_sync.core.models.verb import VerbConjugation
 from anki_sync.core.synthesizers.audio_synthesizer import AudioSynthesizer
@@ -23,6 +25,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# --- Configuration ---
 USER = "User 1"
 ANKI_PATH = pathlib.Path(
     f"{os.environ.get("HOME")}/Library/Application Support/Anki2/{USER}"
@@ -31,8 +34,6 @@ ANKI_DB_PATH = pathlib.Path(os.path.join(ANKI_PATH, "collection.anki2"))
 ANKI_MEDIA_PATH = pathlib.Path(os.path.join(ANKI_PATH, "collection.media"))
 
 
-
-# --- Configuration ---
 def process_verbs():
     logger.info("Starting Gemini API query script using GeminiClient...")
     sheets = GoogleSheetsManager(os.environ.get("GOOGLE_SHEET_ID", ""))
@@ -75,41 +76,6 @@ def process_verbs():
     clean.to_csv("output.csv")
 
 
-def create_verb_deck():
-    sheets = GoogleSheetsManager(os.environ.get("GOOGLE_SHEET_ID", ""))
-    data = sheets.get_rows("Verbs Conjugated")
-    synth = AudioSynthesizer("./media", "elevenlabs")
-
-    anki = AnkiDeckManager()
-
-    for i, verb in data.iterrows():
-        v = VerbConjugation(**verb.to_dict())
-        print(v.guid, verb["GUID"])
-        verb["GUID"] = v.guid
-
-        audio = v.get_audio()
-        synth.synthesize_if_needed(audio.phrase, audio.filename)
-
-        audio = v.get_example_audio()
-        synth.synthesize_if_needed(audio.phrase, audio.filename)
-        print("=" * 25)
-
-    anki.create_verb_deck(data, "Greek Verbs", "verbs.apkg", "./media")
-
-
-class Deck(genanki.Deck):
-
-    def __init__(self, deck_name: str, media_dir: str):
-        deck_id = int(hashlib.md5(deck_name.encode("utf-8")).hexdigest(), 16) % (10**10)
-        super().__init__(deck_id, deck_name)
-        self.media_dir = media_dir
-        self.audio_files = []
-
-    def add_audio(self, audio_filename: str):
-        path = os.path.join(self.media_dir, audio_filename)
-        self.audio_files.append(path)
-
-
 """
 1. Get notes from google sheets
 2. Get notes from anki database
@@ -134,6 +100,7 @@ class Deck(genanki.Deck):
 
 """
 
+
 def get_notes_from_google_sheets(
     sheet: str, source: str = "remote"
 ) -> pandas.DataFrame:
@@ -149,56 +116,73 @@ def get_notes_from_google_sheets(
             data[col] = data[col].fillna("")
     return data
 
-def get_notes_from_anki_database(table: str, source="remote") -> pandas.DataFrame:
-    if source == "remote":
-        with AnkiDatabase(ANKI_DB_PATH) as db:
-            return getattr(db, f"get_{table}")()
-    else:
-        data = pd.read_csv("anotes.csv")
-        data = data.set_index("id")
 
-    return data
+@attr.s(auto_attribs=True, init=True)
+class DeckInfo:
+    sheet: str
+    note_class: BaseWord
+    synthesizer: Literal["elevenlabs", "google"] = "google"
+    source: str = "remote"
 
-def group_notes(
-    gnotes: pandas.DataFrame, anotes: pandas.DataFrame
-) -> dict[str, set[str]]:
 
-    gnote_guids: set[str] = set(gnotes["guid"])
-    anote_guids: set[str] = set(anotes["guid"])
+def generate_deck(anki_db, deck_info: DeckInfo):
+    gnotes = get_notes_from_google_sheets(deck_info.sheet, source="remote")
 
-    in_both = gnote_guids.intersection(anote_guids)
-    only_g = gnote_guids.difference(anote_guids)
-    only_a = anote_guids.difference(gnote_guids)
+    deck = Deck("Greek", ANKI_MEDIA_PATH)
+    synth = AudioSynthesizer(ANKI_MEDIA_PATH, deck_info.synthesizer)
 
-    groupings = {
-        "in_both": in_both,
-        "only_google_sheets": only_g,
-        "only_anki_database": only_a,
-    }
+    entries = []
+    rows_to_update = []
+    for row in gnotes.iterrows():
+        gnote = deck_info.note_class.from_sheets(row)
+        anote = gnote.to_note(anki_db)
+        entries.append(gnote)
 
-    return groupings
+        deck.add_audio(gnote.audio_filename)
+        deck.add_note(anote)
+
+        audio = gnote.get_audio_meta()
+        synth.synthesize_if_needed(audio.phrase, audio.filename)
+
+        rows_to_update.append(
+            {
+                "range": f"{deck_info.sheet}!{gnote._google_sheet_cell}",
+                "values": [[gnote.guid]],
+            }
+        )
+
+        if not gnote.exists_in_anki():
+            print(gnote._google_sheet_cell, gnote.guid)
+
+    return deck, rows_to_update
 
 
 if __name__ == "__main__":
+    sheets = GoogleSheetsManager(os.environ.get("GOOGLE_SHEET_ID", ""))
 
-    gnotes = get_notes_from_google_sheets("nouns", source="csv")
-    anotes = get_notes_from_anki_database("notes")
-    groups = group_notes(gnotes, anotes)
+    ndi = DeckInfo(
+        sheet="nouns",
+        note_class=Noun,
+    )
+    vdi = DeckInfo(
+        sheet="verbs conjugated",
+        note_class=VerbConjugation,
+    )
+    adi = DeckInfo(
+        sheet="adjectives",
+        note_class=Adjective,
+    )
+    db = AnkiDatabase(ANKI_DB_PATH)
 
-    gnotes_by_guid = gnotes.reset_index().set_index("guid")
-
+    package = genanki.Package([])
+    rows_to_update = []
     with AnkiDatabase(ANKI_DB_PATH) as anki_db:
+        for deck_meta in [ndi, vdi, adi]:
+            print(f"generating deck for {deck_meta.sheet}")
+            deck, rtu = generate_deck(anki_db, deck_meta)
+            rows_to_update.extend(rtu)
+            package.decks.append(deck)
+            package.media_files.extend(deck.audio_files)
+        package.write_to_file("greek.apkg")
 
-        deck = Deck("Greek", ANKI_MEDIA_PATH)
-
-        for idx, row in gnotes.iterrows():
-            gnoun = Noun.from_sheets(row)
-            anote = gnoun.to_note(anki_db)
-            # anote.attach_anki_db(anki_db)
-
-            deck.add_audio(gnoun.audio_filename)
-            deck.add_note(anote)
-
-        p = genanki.Package(deck)
-        p.media_files = deck.audio_files
-        p.write_to_file("./test.apkg")
+    sheets.batch_update(rows_to_update)

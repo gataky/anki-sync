@@ -1,7 +1,7 @@
-import time
 import itertools
 import pathlib
 import sqlite3
+import time
 from enum import Enum
 
 import pandas as pd
@@ -57,14 +57,22 @@ class AnkiDatabase:
         query = "SELECT * FROM revlog WHERE cid = ?"
         return self.execute(query, (card_id,))
 
-    def get_note_id_by_guid(self, guid: str) -> int:
+    def get_note_id_by_guid(self, guid: str) -> tuple[int, bool]:
+        """Will get the note id by guid.  If there is no note then we will generate one
+        otherwise we'll return the existing note id.
+
+        If we found an existing note id we will return true as the second return arg else false.
+        This is used to know if we should populate the guid back to google sheets.
+        """
+        if guid == "":
+            return next(self.id_gen), False
+
         query = "SELECT id FROM notes WHERE guid = ?"
         row = self.execute(query, (guid,))
         if len(row) == 0:
-            id = next(self.id_gen)
+            return next(self.id_gen), False
         else:
-            id = row["id"].item()
-        return id
+            return row["id"].item(), True
 
     def _get_table(self, table: Table) -> pd.DataFrame:
         query = f"SELECT * FROM {table.value}"

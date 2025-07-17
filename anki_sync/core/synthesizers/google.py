@@ -1,5 +1,3 @@
-import os
-
 from google.cloud import texttospeech
 from google.cloud.texttospeech_v1.types import SynthesizeSpeechResponse
 
@@ -31,7 +29,7 @@ class GoogleSynthesizer(BaseSynthesizer):
             print(f"Failed to initialize Google Cloud TTS: {e}")
             self.client = None
 
-    def synthesize(self, text: str, output_directory: str) -> None:
+    def synthesize(self, text: str, filepath: str) -> None:
         """Synthesize text to speech using Google Cloud TTS.
 
         Args:
@@ -41,7 +39,7 @@ class GoogleSynthesizer(BaseSynthesizer):
         The audio file will be saved as {text}.mp3 in the output directory.
         Uses a Greek female voice (el-GR-Standard-B) for synthesis.
         """
-        if not (text and output_directory and self.client):
+        if not (text and filepath and self.client):
             return
 
         input_text = texttospeech.SynthesisInput(text=text)
@@ -61,7 +59,6 @@ class GoogleSynthesizer(BaseSynthesizer):
                     "audio_config": audio_config,
                 }
             )
-            filepath = os.path.join(output_directory, f"{text}.mp3")
             with open(filepath, "wb") as f:
                 f.write(response.audio_content)
         except Exception as e:

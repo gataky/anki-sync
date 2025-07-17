@@ -1,5 +1,3 @@
-import json
-
 import attr
 import genanki
 import pandas
@@ -13,7 +11,7 @@ from anki_sync.utils.sql import AnkiDatabase
 
 ANKI_SHARED_CSS = ".card { font-family: arial; font-size: 20px; text-align: center; color: black; background-color: white; } .note_type { font-size:0.8em; color:grey; } .table-centered { margin-left: auto; margin-right: auto; }"
 
-ANKI_NOUN_MODEL_ID = 1000000000  # Keep this consistent for words
+ANKI_NOUN_MODEL_ID = 1607392322  # Keep this consistent for words
 ANKI_NOUN_MODEL_NAME = "greek noun"
 ANKI_NOUN_MODEL_FIELDS = [
     {"name": "english"},
@@ -76,25 +74,27 @@ class Noun(BaseWord):
     }
 
     def get_audio_meta(self) -> AudioMeta:
-        return AudioMeta(phrase=self.greek, filename=self.audio)
+        return AudioMeta(phrase=self.greek, filename=self.audio_filename)
 
     def to_note(self, old_db_conn: AnkiDatabase) -> Note:
-        self.id = old_db_conn.get_note_id_by_guid(self.guid)
+        self.id, self._exists_in_anki = old_db_conn.get_note_id_by_guid(self.guid)
+        if self._exists_in_anki is False:
+            self.guid = generate_guid()
         article = self._gender_mapping.get(self.gender, "")
 
         note_fields = [
             self.english,
             f"{article} {self.greek}",
             f"[sound:{self.audio_filename}]",
-            self.generate_declension_table()
+            self.generate_declension_table(),
         ]
+
         return Note(
             model=NOUN_MODEL,
             guid=self.guid,
             id=self.id,
             fields=note_fields,
             tags=self.generate_note_tags(),
-            data=self.generate_note_meta(),
             old_db_conn=old_db_conn,
         )
 
@@ -123,24 +123,5 @@ class Noun(BaseWord):
         return sorted(list(set(tags_list)))
 
     def generate_declension_table(self):
-        data = [
-            [ self.n_s, self.n_p, self.a_s, self.a_p, self.g_s, self.g_p ]
-        ]
+        data = [[self.n_s, self.n_p, self.a_s, self.a_p, self.g_s, self.g_p]]
         return create_declension_table_for_noun(data)
-
-    def generate_note_meta(self) -> str:
-        meta = {
-            "english": self.english,
-            "greek": self.greek,
-            "gender": self.gender,
-            "tags": self.tags,
-            "n_s": self.n_s,
-            "n_p": self.n_p,
-            "a_s": self.a_s,
-            "a_p": self.a_p,
-            "g_s": self.g_s,
-            "g_p": self.g_p,
-            "audio_filename": self.audio_filename,
-        }
-
-        return json.dumps(meta)

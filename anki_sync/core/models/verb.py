@@ -6,40 +6,41 @@ import pandas
 
 from anki_sync.core.models.audio import AudioMeta
 from anki_sync.core.models.base import BaseWord
+from anki_sync.core.models.note import Note
 from anki_sync.utils.guid import generate_guid
+from anki_sync.utils.sql import AnkiDatabase
 
 ANKI_VERB_MODEL_ID = 1607392321  # New Randomly generated ID for verbs
-ANKI_VERB_MODEL_NAME = "Anki-Sync Verb (Eng-Gr)"
+ANKI_VERB_MODEL_NAME = "greek verb"
 # Updated fields based on new Verb model and sheet structure
 ANKI_VERB_MODEL_FIELDS = [
-    {"name": "ID"},
-    {"name": "Conjugated"},  # Main citation form
-    {"name": "English"},
-    {"name": "Audio Filename"},
-    {"name": "Tense"},
-    {"name": "Person"},
-    {"name": "Number"},
+    {"name": "english"},
+    {"name": "greek"},  # Main citation form
+    {"name": "audio filename"},
+    {"name": "tense"},
+    {"name": "person"},
+    {"name": "number"},
 ]
 # Updated template to include a table for tenses
 ANKI_VERB_MODEL_TEMPLATES = [
     {
         "name": "Card 1 (English to Greek Verb)",
         "qfmt": """
-            {{English}}
-            <br><small>{{Tense}} {{Person}} person {{Number}}</small>""",
+            {{english}}
+            <br><small>{{tense}} {{person}} person {{number}}</small>""",
         "afmt": """
             {{FrontSide}}
             <hr id="answer">
-            {{Greek}} {{Audio Filename}}""",
+            {{greek}} {{audio filename}}""",
     },
     {
         "name": "Card 2 (Greek Verb to English)",
         "qfmt": """
-            {{Greek}} {{Audio Filename}}""",
+            {{greek}} {{audio filename}}""",
         "afmt": """
             {{FrontSide}}
             <hr id="answer">
-            {{English}}""",
+            {{english}}""",
     },
 ]
 
@@ -75,7 +76,7 @@ class Verb(BaseWord):
 class VerbConjugation(BaseWord):
 
     # Required fields
-    id: int
+    ord: int
     conjugated: str
     english: str
     tense: str
@@ -88,27 +89,31 @@ class VerbConjugation(BaseWord):
     audio_filename: str = ""
     tags: list[str] = attr.ib(factory=list)
 
-    def to_note(self) -> genanki.Note:
+    def get_audio_meta(self) -> AudioMeta:
+        return AudioMeta(phrase=self.conjugated, filename=f"{self.verb}-{self.ord}.mp3")
+
+    def to_note(self, old_db_conn: AnkiDatabase) -> Note:
         # Create note with the new fields
+        self.id, self._exists_in_anki = old_db_conn.get_note_id_by_guid(self.guid)
+        if self._exists_in_anki is False:
+            self.guid = generate_guid()
         note_fields = [
-            self.id,
-            self.conjugated,
             self.english,
+            self.conjugated,
             f"[sound:{self.audio_filename}]",
             self.tense.lower(),
             self.person.lower(),
             self.number.lower(),
         ]
 
-        return genanki.Note(
+        return Note(
             model=VERB_MODEL,
-            fields=note_fields,
-            tags=self.tags,
             guid=self.guid,
+            id=self.id,
+            fields=note_fields,
+            tags=self.generate_note_tags(),
+            old_db_conn=old_db_conn,
         )
-
-    def get_audio(self) -> AudioMeta:
-        return AudioMeta(phrase=self.conjugated, filename=f"{self.verb}-{self.id}.mp3")
 
     def _post_process_dataframe(self, data: pandas.DataFrame):
         self._pp_df_audio(data)
@@ -122,7 +127,7 @@ class VerbConjugation(BaseWord):
         self._pp_an_audio(note)
 
     def _pp_df_audio(self, data: pandas.DataFrame):
-        self.audio_filename = f"{self.verb}-{self.id}.mp3"
+        self.audio_filename = f"{self.verb}-{self.ord}.mp3"
 
     def _pp_df_tags(self, data: pandas.DataFrame):
         self.tags = [f"class::verb::{self.verb}"]
@@ -132,3 +137,6 @@ class VerbConjugation(BaseWord):
         match = self.filename_re.match(filename)
         if match:
             self.audio_filename = match.groupdict().get("filename", "")
+
+    def generate_note_tags(self) -> str:
+        return ""
