@@ -1,8 +1,22 @@
 import hashlib
 import os
 import pathlib
+from typing import Literal
 
+import attr
 import genanki
+
+from .adjective import Adjective
+from .noun import Noun
+from .verb import VerbConjugation
+
+
+@attr.s(auto_attribs=True, init=True)
+class DeckInfo:
+    sheet: str
+    note_class: type[Noun | VerbConjugation | Adjective]
+    synthesizer: Literal["elevenlabs", "google"] = "google"
+    source: str = "remote"
 
 
 class Deck(genanki.Deck):

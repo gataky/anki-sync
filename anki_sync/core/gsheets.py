@@ -12,7 +12,9 @@ class GoogleSheetsManager(GoogleAuth):
         super().__init__()
         self._sheet_id: str = sheet_id
         self._client = (
-            build("sheets", "v4", credentials=self.certs).spreadsheets().values()
+            build("sheets", "v4", credentials=self.certs, cache_discovery=False)
+            .spreadsheets()
+            .values()
         )
 
     def batch_update(self, updates: list[dict[str, Any]]):

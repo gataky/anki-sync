@@ -2,9 +2,8 @@ import io
 import logging
 import os
 import pathlib
-from typing import Literal, cast
+from typing import cast
 
-import attr
 import genanki
 import pandas as pd
 from pandas._libs import pandas
@@ -12,8 +11,7 @@ from pandas._libs import pandas
 from anki_sync.core.gemini_client import GeminiClient
 from anki_sync.core.gsheets import GoogleSheetsManager
 from anki_sync.core.models.adjective import Adjective
-from anki_sync.core.models.base import BaseWord
-from anki_sync.core.models.deck import Deck
+from anki_sync.core.models.deck import Deck, DeckInfo
 from anki_sync.core.models.noun import Noun
 from anki_sync.core.models.verb import VerbConjugation
 from anki_sync.core.synthesizers.audio_synthesizer import AudioSynthesizer
@@ -117,26 +115,15 @@ def get_notes_from_google_sheets(
     return data
 
 
-@attr.s(auto_attribs=True, init=True)
-class DeckInfo:
-    sheet: str
-    note_class: BaseWord
-    synthesizer: Literal["elevenlabs", "google"] = "google"
-    source: str = "remote"
-
-
-def generate_deck(anki_db, deck_info: DeckInfo):
+def generate_deck(anki_db: AnkiDatabase, deck: Deck, deck_info: DeckInfo):
     gnotes = get_notes_from_google_sheets(deck_info.sheet, source="remote")
 
-    deck = Deck("Greek", ANKI_MEDIA_PATH)
     synth = AudioSynthesizer(ANKI_MEDIA_PATH, deck_info.synthesizer)
 
-    entries = []
     rows_to_update = []
     for row in gnotes.iterrows():
         gnote = deck_info.note_class.from_sheets(row)
         anote = gnote.to_note(anki_db)
-        entries.append(gnote)
 
         deck.add_audio(gnote.audio_filename)
         deck.add_note(anote)
@@ -144,17 +131,18 @@ def generate_deck(anki_db, deck_info: DeckInfo):
         audio = gnote.get_audio_meta()
         synth.synthesize_if_needed(audio.phrase, audio.filename)
 
-        rows_to_update.append(
-            {
-                "range": f"{deck_info.sheet}!{gnote._google_sheet_cell}",
-                "values": [[gnote.guid]],
-            }
-        )
-
         if not gnote.exists_in_anki():
-            print(gnote._google_sheet_cell, gnote.guid)
+            cell = f"{deck_info.sheet}!{gnote._google_sheet_cell}"
+            rows_to_update.append(
+                {
+                    "range": cell,
+                    "values": [[gnote.guid]],
+                }
+            )
 
-    return deck, rows_to_update
+            print(f"new note found {gnote.guid}: {gnote.english} - {gnote.greek}")
+
+    return rows_to_update
 
 
 if __name__ == "__main__":
@@ -172,17 +160,18 @@ if __name__ == "__main__":
         sheet="adjectives",
         note_class=Adjective,
     )
-    db = AnkiDatabase(ANKI_DB_PATH)
 
-    package = genanki.Package([])
+    deck = Deck("Greek", ANKI_MEDIA_PATH)
+    package = genanki.Package(deck)
     rows_to_update = []
+
     with AnkiDatabase(ANKI_DB_PATH) as anki_db:
+
         for deck_meta in [ndi, vdi, adi]:
-            print(f"generating deck for {deck_meta.sheet}")
-            deck, rtu = generate_deck(anki_db, deck_meta)
+            rtu = generate_deck(anki_db, deck, deck_meta)
             rows_to_update.extend(rtu)
-            package.decks.append(deck)
-            package.media_files.extend(deck.audio_files)
+
+        package.media_files.extend(deck.audio_files)
         package.write_to_file("greek.apkg")
 
     sheets.batch_update(rows_to_update)
