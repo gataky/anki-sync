@@ -5,9 +5,9 @@ import pandas
 from anki_sync.core.models.audio import AudioMeta
 from anki_sync.core.models.base import BaseWord
 from anki_sync.core.models.note import Note
+from anki_sync.core.sql import AnkiDatabase
 from anki_sync.utils.guid import generate_guid
 from anki_sync.utils.html import create_declension_table_for_noun
-from anki_sync.utils.sql import AnkiDatabase
 
 ANKI_SHARED_CSS = ".card { font-family: arial; font-size: 20px; text-align: center; color: black; background-color: white; } .note_type { font-size:0.8em; color:grey; } .table-centered { margin-left: auto; margin-right: auto; }"
 

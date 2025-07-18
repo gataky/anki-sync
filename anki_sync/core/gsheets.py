@@ -24,11 +24,18 @@ class GoogleSheetsManager(GoogleAuth):
         body = {"valueInputOption": "USER_ENTERED", "data": updates}
         self._client.batchUpdate(spreadsheetId=self._sheet_id, body=body).execute()
 
-    def get_rows(self, sheet_name: str) -> pd.DataFrame:
+    def get_rows(self, sheet: str) -> pd.DataFrame:
         values = (
-            self._client.get(spreadsheetId=self._sheet_id, range=sheet_name).execute()
+            self._client.get(spreadsheetId=self._sheet_id, range=sheet).execute()
         ).get("values", [])
 
         if len(values) == 0:
             return pd.DataFrame()
         return pd.DataFrame(values[1:], columns=values[0])
+
+    def get_notes(self, sheet: str) -> pd.DataFrame:
+        data = self.get_rows(sheet)
+        if sheet == "nouns":
+            for col in ["tag", "sub tag 1", "sub tag 2"]:
+                data[col] = data[col].fillna("")
+        return data

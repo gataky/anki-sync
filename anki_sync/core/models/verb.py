@@ -7,8 +7,8 @@ import pandas
 from anki_sync.core.models.audio import AudioMeta
 from anki_sync.core.models.base import BaseWord
 from anki_sync.core.models.note import Note
+from anki_sync.core.sql import AnkiDatabase
 from anki_sync.utils.guid import generate_guid
-from anki_sync.utils.sql import AnkiDatabase
 
 ANKI_VERB_MODEL_ID = 1607392321  # New Randomly generated ID for verbs
 ANKI_VERB_MODEL_NAME = "greek verb"

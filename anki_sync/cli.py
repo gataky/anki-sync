@@ -1,10 +1,23 @@
-import click
+import os
+import pathlib
 
-from .core.anki import AnkiDeckManager
-from .core.gsheets import GoogleSheetsManager
-from .core.models import Word
-from .core.synthesizers.audio_synthesizer import AudioSynthesizer
-from .core.word_processor import WordProcessor
+import click
+import genanki
+
+from anki_sync.core.gsheets import GoogleSheetsManager
+from anki_sync.core.models.adjective import Adjective
+from anki_sync.core.models.deck import Deck, DeckInfo
+from anki_sync.core.models.noun import Noun
+from anki_sync.core.models.verb import VerbConjugation
+from anki_sync.core.sql import AnkiDatabase
+
+# --- Configuration ---
+USER = "User 1"
+ANKI_PATH = pathlib.Path(
+    f"{os.environ.get("HOME")}/Library/Application Support/Anki2/{USER}"
+)
+ANKI_DB_PATH = pathlib.Path(os.path.join(ANKI_PATH, "collection.anki2"))
+ANKI_MEDIA_PATH = pathlib.Path(os.path.join(ANKI_PATH, "collection.media"))
 
 
 @click.group()
@@ -18,98 +31,48 @@ def main() -> None:
 
 
 @main.command(name="sync")
-@click.option(
-    "--sheet-id",
-    required=True,
-    envvar="GOOGLE_SHEET_ID",
-    help="The ID of the Google Sheet containing 'Words' and 'Verbs' sheets.",
-)
-@click.option(
-    "--deck-name",
-    required=True,
-    envvar="ANKI_DECK_NAME",  # Changed from ANKI_DECK_NAME_COMBINED
-    help="Name for the combined Anki deck.",
-)
-@click.option(
-    "--output-file",
-    default="anki_combined_deck.apkg",  # Changed default
-    show_default=True,
-    type=click.Path(dir_okay=False, writable=True, resolve_path=True),
-    help="The path to save the generated Anki package (.apkg) file. Will be an absolute path.",
-)
-@click.option(
-    "--anki-audio-directory",
-    envvar="ANKI_AUDIO_DIRECTORY",
-    type=click.Path(
-        exists=True, file_okay=False, dir_okay=True, readable=True, resolve_path=True
-    ),
-    help="Optional. Path to the directory for storing/finding sound files.",
-)
-@click.option(
-    "--synthesizer",
-    type=click.Choice(["elevenlabs", "google"]),
-    default="elevenlabs",
-    show_default=True,
-    help="The text-to-speech synthesizer to use for generating audio.",
-)
-def sync(
-    sheet_id: str,
-    deck_name: str,
-    output_file: str,
-    anki_audio_directory: str | None,
-    synthesizer: str,
-) -> None:
-    """Fetches words and verbs from a Google Sheet and creates a combined Anki package.
+def sync() -> None:
 
-    This command:
-    1. Reads data from 'Words' and 'Verbs' sheets in the specified Google Sheet.
-    2. Processes items, generates tags, and synthesizes audio.
-    3. Creates a single Anki package (.apkg) file with both words and verbs.
+    click.secho(f"USER           : {USER}", fg="blue")
+    click.secho(f"ANKI_PATH      : {ANKI_PATH}", fg="blue")
+    click.secho(f"ANKI_DB_PATH   : {ANKI_DB_PATH}", fg="blue")
+    click.secho(f"ANKI_MEDIA_PATH: {ANKI_MEDIA_PATH}", fg="blue")
 
-    All options can be set via environment variables or command-line arguments.
-    Command-line arguments take precedence over environment variables.
-    """
-    WORDS_SHEET_NAME = "Words"
-
-    audio_synthesizer = AudioSynthesizer(
-        output_directory=anki_audio_directory,
-        synthesizer_type=synthesizer,
+    ndi = DeckInfo(
+        sheet="nouns",
+        note_class=Noun,
+    )
+    vdi = DeckInfo(
+        sheet="verbs conjugated",
+        note_class=VerbConjugation,
+    )
+    adi = DeckInfo(
+        sheet="adjectives",
+        note_class=Adjective,
     )
 
-    words_data: list[Word] = []
-    guid_updates_batch = []
-    try:
-        click.echo(f"Attempting to fetch words from sheet: '{WORDS_SHEET_NAME}'...")
-        word_processor = WordProcessor(audio_synthesizer=audio_synthesizer)
-        gsheets_manager_words = GoogleSheetsManager(sheet_id=sheet_id)
-        rows = gsheets_manager_words.get_rows(WORDS_SHEET_NAME)
+    gsheets = GoogleSheetsManager(os.environ.get("GOOGLE_SHEET_ID", ""))
+    deck = Deck("Greek", ANKI_MEDIA_PATH)
+    package = genanki.Package(deck)
+    rows_to_update = []
 
-        for idx, row in rows.iterrows():
-            item, guid_update = word_processor.process_row(row, WORDS_SHEET_NAME, idx)
-            if guid_update:
-                guid_updates_batch.append(guid_update)
-            words_data.append(item)
+    with AnkiDatabase(ANKI_DB_PATH) as anki_db:
 
-        print(guid_updates_batch)
-        gsheets_manager_words.batch_update(guid_updates_batch)
+        click.secho("processing sheet:", fg="yellow")
+        for deck_meta in [ndi, vdi, adi]:
+            click.secho(f"   * {deck_meta.sheet}", fg="yellow")
+            rtu = deck.generate(anki_db, gsheets, deck_meta)
+            rows_to_update.extend(rtu)
 
-        click.echo(f"Fetched {len(rows)} words from sheet '{WORDS_SHEET_NAME}'.")
-    except Exception as e:
-        click.secho(
-            f"Could not fetch or process words from sheet '{WORDS_SHEET_NAME}'. Error: {e}",
-            fg="yellow",
-        )
+        click.secho(f"writing package to greek.apkg", fg="yellow")
+        package.media_files.extend(deck.audio_files)
+        package.write_to_file("greek.apkg")
 
-    anki_manager = AnkiDeckManager()
-    anki_manager.create_word_deck(
-        words=words_data,
-        deck_name=deck_name,
-        output_file=output_file,
-        audio_directory=anki_audio_directory,
-    )
-    click.secho(
-        f"Combined deck '{deck_name}' created successfully at {output_file}", fg="green"
-    )
+    if len(rows_to_update) > 0:
+        click.secho(f"updating sheets with missing guids")
+        gsheets.batch_update(rows_to_update)
+
+    click.secho(f"deck created successfully", fg="green")
 
 
 if __name__ == "__main__":
