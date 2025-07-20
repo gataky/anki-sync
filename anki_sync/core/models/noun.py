@@ -111,7 +111,7 @@ class Noun(BaseWord):
     def _pp_df_audio(self, data: pandas.DataFrame):
         self.audio_filename = f"{self.greek}.mp3"
 
-    def generate_note_tags(self):
+    def generate_note_tags(self) -> list[str]:
         tags_list = []
         current_hierarchy_parts = []
         for cell_content_raw in self.tags:

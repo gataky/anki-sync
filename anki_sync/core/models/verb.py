@@ -138,5 +138,7 @@ class VerbConjugation(BaseWord):
         if match:
             self.audio_filename = match.groupdict().get("filename", "")
 
-    def generate_note_tags(self) -> str:
-        return ""
+    def generate_note_tags(self) -> list[str]:
+        tag = f"verb::{self.verb}::{self.tense}"
+        tag = tag.replace(" ", "\u00a0")
+        return [tag]
