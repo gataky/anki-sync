@@ -62,6 +62,6 @@ class Deck(genanki.Deck):
                     }
                 )
 
-                print(f"new note found {gnote.guid}: {gnote.english}")
+                print(f"        + {gnote.guid}: {gnote.english}")
 
         return rows_to_update
