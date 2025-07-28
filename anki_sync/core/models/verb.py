@@ -40,7 +40,9 @@ ANKI_VERB_MODEL_TEMPLATES = [
         "afmt": """
             {{FrontSide}}
             <hr id="answer">
-            {{english}}""",
+            {{english}}
+            <br><small>{{tense}} {{person}} person {{number}}</small>
+            """,
     },
 ]
 

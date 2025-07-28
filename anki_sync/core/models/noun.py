@@ -124,4 +124,5 @@ class Noun(BaseWord):
 
     def generate_declension_table(self):
         data = [[self.n_s, self.n_p, self.a_s, self.a_p, self.g_s, self.g_p]]
-        return create_declension_table_for_noun(data)
+        article = self._gender_mapping.get(self.gender, "")
+        return create_declension_table_for_noun(data, article)
