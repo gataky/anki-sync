@@ -9,7 +9,22 @@ from anki_sync.core.sql import AnkiDatabase
 from anki_sync.utils.guid import generate_guid
 from anki_sync.utils.html import create_declension_table_for_noun
 
-ANKI_SHARED_CSS = ".card { font-family: arial; font-size: 20px; text-align: center; color: black; background-color: white; } .note_type { font-size:0.8em; color:grey; } .table-centered { margin-left: auto; margin-right: auto; }"
+ANKI_SHARED_CSS = """
+.card {
+   font-family: arial;
+   font-size: 20px;
+   text-align: center;
+   color: black;
+   background-color: white;
+}
+.note_type {
+    font-size:0.8em; color:grey;
+}
+table {
+    margin-left: auto;
+    margin-right: auto;
+}
+"""
 
 ANKI_NOUN_MODEL_ID = 1607392322  # Keep this consistent for words
 ANKI_NOUN_MODEL_NAME = "greek noun"
