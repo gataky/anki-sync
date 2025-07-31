@@ -9,26 +9,10 @@ from anki_sync.core.models.base import BaseWord
 from anki_sync.core.models.note import Note
 from anki_sync.core.sql import AnkiDatabase
 from anki_sync.utils.guid import generate_guid
+from anki_sync.core.models.constants import ANKI_SHARED_CSS, MODEL_IDS
 from anki_sync.utils.html import create_declension_table_for_adj
 
-ANKI_SHARED_CSS = """
-.card {
-   font-family: arial;
-   font-size: 20px;
-   text-align: center;
-   color: black;
-   background-color: white;
-}
-.note_type {
-    font-size:0.8em; color:grey;
-}
-table {
-    margin-left: auto;
-    margin-right: auto;
-}
-"""
-
-ANKI_ADJ_MODEL_ID = 1607392323  # Keep this consistent for words
+ANKI_ADJ_MODEL_ID = MODEL_IDS["adjective"]
 ANKI_ADJ_MODEL_NAME = "greek adjective"
 ANKI_ADJ_MODEL_FIELDS = [
     {"name": "english"},
@@ -121,19 +105,19 @@ class Adjective(BaseWord):
 
     def _post_process_dataframe(self, data: pandas.DataFrame):
         data = data.fillna("")
-        # self._pp_df_tags(data)
+        self._pp_df_tags(data)
         self._pp_df_audio(data)
 
-    # def _pp_df_tags(self, data: pandas.DataFrame):
-    #     category_index = data.index.get_loc("tag") if "tag" in data.index else -1
-    #     tags = data.iloc[category_index:].tolist() if category_index >= 0 else []
-    #     self.tags = list(filter(lambda x: x, tags))
+    def _pp_df_tags(self, data: pandas.DataFrame):
+        category_index = data.index.get_loc("tag") if "tag" in data.index else -1
+        tags = data.iloc[category_index:].tolist() if category_index >= 0 else []
+        self.tags = list(filter(lambda x: x, tags))
 
     def _pp_df_audio(self, data: pandas.DataFrame):
         self.audio_filename = f"{self.greek}.mp3"
 
     def generate_note_tags(self):
-        tags_list = []
+        tags_list = ["grammar::adjective"]
         current_hierarchy_parts = []
         for cell_content_raw in self.tags:
             cell_content = str(cell_content_raw or "").strip()

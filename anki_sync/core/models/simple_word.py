@@ -1,76 +1,57 @@
+"""
+Base class for simple word models (adverb, preposition, conjunction).
+"""
+
 import attr
 import genanki
 import pandas
 
 from anki_sync.core.models.audio import AudioMeta
 from anki_sync.core.models.base import BaseWord
+from anki_sync.core.models.constants import (
+    ANKI_SHARED_CSS,
+    BASIC_WORD_MODEL_FIELDS,
+    BASIC_WORD_MODEL_TEMPLATES,
+    MODEL_IDS,
+)
 from anki_sync.core.models.note import Note
 from anki_sync.core.sql import AnkiDatabase
-from anki_sync.core.models.constants import ANKI_SHARED_CSS, MODEL_IDS
 from anki_sync.utils.guid import generate_guid
-from anki_sync.utils.html import create_declension_table_for_noun
 
-ANKI_NOUN_MODEL_ID = MODEL_IDS["noun"]
-ANKI_NOUN_MODEL_NAME = "greek noun"
-ANKI_NOUN_MODEL_FIELDS = [
-    {"name": "english"},
-    {"name": "greek"},
-    {"name": "audio filename"},
-    {"name": "declension table"},
-]
-ANKI_NOUN_MODEL_TEMPLATES = [
-    {
-        "name": "Card 1 (English to Greek)",
-        "qfmt": "{{english}}",
-        "afmt": '{{FrontSide}}<hr id="answer">{{greek}}<br>{{audio filename}}<br>{{declension table}}',
-    },
-    {
-        "name": "Card 2 (Greek to English)",
-        "qfmt": "{{greek}}<br>{{audio filename}}",
-        "afmt": '{{FrontSide}}<hr id="answer">{{english}}',
-    },
-]
 
-NOUN_MODEL_FIELDS = [
-    {"name": field["name"], "ord": idx}
-    for idx, field in enumerate(ANKI_NOUN_MODEL_FIELDS)
-]
-NOUN_MODEL = genanki.Model(
-    ANKI_NOUN_MODEL_ID,
-    ANKI_NOUN_MODEL_NAME,
-    fields=NOUN_MODEL_FIELDS,
-    templates=ANKI_NOUN_MODEL_TEMPLATES,
-    css=ANKI_SHARED_CSS,
-)
+def create_simple_word_model(word_type: str):
+    """Create a genanki Model for simple word types."""
+    model_id = MODEL_IDS.get(word_type, 1600000000)
+    model_name = f"greek {word_type}"
+    
+    model_fields = [
+        {"name": field["name"], "ord": idx}
+        for idx, field in enumerate(BASIC_WORD_MODEL_FIELDS)
+    ]
+    
+    return genanki.Model(
+        model_id,
+        model_name,
+        fields=model_fields,
+        templates=BASIC_WORD_MODEL_TEMPLATES,
+        css=ANKI_SHARED_CSS,
+    )
 
 
 @attr.s(auto_attribs=True, init=False)
-class Noun(BaseWord):
+class SimpleWord(BaseWord):
+    """Base class for simple word types (adverb, preposition, conjunction)."""
 
     # Required fields
     english: str
     greek: str
-    gender: str
 
     # Fields with defaults
     audio_filename: str = ""
-    declension_table: str = ""
     tags: list[str] = attr.ib(factory=list)
 
     guid: str = attr.ib(factory=lambda: generate_guid(10))
     id: int | None = None
-    n_s: str = "-"
-    n_p: str = "-"
-    a_s: str = "-"
-    a_p: str = "-"
-    g_s: str = "-"
-    g_p: str = "-"
-
-    _gender_mapping = {
-        "masculine": "ο",
-        "feminine": "η",
-        "neuter": "το",
-    }
 
     def get_audio_meta(self) -> AudioMeta:
         return AudioMeta(phrase=self.greek, filename=self.audio_filename)
@@ -79,17 +60,18 @@ class Noun(BaseWord):
         self.id, self._exists_in_anki = old_db_conn.get_note_id_by_guid(self.guid)
         if self._exists_in_anki is False:
             self.guid = generate_guid()
-        article = self._gender_mapping.get(self.gender, "")
 
         note_fields = [
             self.english,
-            f"{article} {self.greek}",
+            self.greek,
             f"[sound:{self.audio_filename}]",
-            self.generate_declension_table(),
         ]
-
+        
+        # Get the model for this word type
+        model = create_simple_word_model(self._get_word_type())
+        
         return Note(
-            model=NOUN_MODEL,
+            model=model,
             guid=self.guid,
             id=self.id,
             fields=note_fields,
@@ -111,7 +93,7 @@ class Noun(BaseWord):
         self.audio_filename = f"{self.greek}.mp3"
 
     def generate_note_tags(self) -> list[str]:
-        tags_list = ["grammar::noun"]
+        tags_list = [f"grammar::{self._get_word_type()}"]
         current_hierarchy_parts = []
         for cell_content_raw in self.tags:
             cell_content = str(cell_content_raw or "").strip()
@@ -121,7 +103,15 @@ class Noun(BaseWord):
             tags_list.append("::".join(current_hierarchy_parts))
         return sorted(list(set(tags_list)))
 
-    def generate_declension_table(self):
-        data = [[self.n_s, self.n_p, self.a_s, self.a_p, self.g_s, self.g_p]]
-        article = self._gender_mapping.get(self.gender, "")
-        return create_declension_table_for_noun(data, article)
+    def generate_note_meta(self) -> str:
+        meta = {
+            "english": self.english,
+            "greek": self.greek,
+            "tags": self.tags,
+            "audio_filename": self.audio_filename,
+        }
+        return str(meta)
+
+    def _get_word_type(self) -> str:
+        """Override this method in subclasses to return the word type."""
+        raise NotImplementedError("Subclasses must implement _get_word_type()") 

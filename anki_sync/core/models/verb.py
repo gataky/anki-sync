@@ -8,9 +8,10 @@ from anki_sync.core.models.audio import AudioMeta
 from anki_sync.core.models.base import BaseWord
 from anki_sync.core.models.note import Note
 from anki_sync.core.sql import AnkiDatabase
+from anki_sync.core.models.constants import MODEL_IDS
 from anki_sync.utils.guid import generate_guid
 
-ANKI_VERB_MODEL_ID = 1607392321  # New Randomly generated ID for verbs
+ANKI_VERB_MODEL_ID = MODEL_IDS["verb"]
 ANKI_VERB_MODEL_NAME = "greek verb"
 # Updated fields based on new Verb model and sheet structure
 ANKI_VERB_MODEL_FIELDS = [
@@ -46,7 +47,7 @@ ANKI_VERB_MODEL_TEMPLATES = [
     },
 ]
 
-ANKI_SHARED_CSS = ".card { font-family: arial; font-size: 20px; text-align: center; color: black; background-color: white; } .note_type { font-size:0.8em; color:grey; }"
+from anki_sync.core.models.constants import ANKI_SHARED_CSS
 
 VERB_MODEL_FIELDS = [
     {"name": field["name"], "ord": idx}
