@@ -29,13 +29,19 @@ class GoogleSheetsManager(GoogleAuth):
             self._client.get(spreadsheetId=self._sheet_id, range=sheet).execute()
         ).get("values", [])
 
+        expected_columns = len(values[0])
+        for v in values:
+            if len(v) < expected_columns:
+                v.extend([""] * (expected_columns - len(v)))
+
         if len(values) == 0:
             return pd.DataFrame()
         return pd.DataFrame(values[1:], columns=values[0])
 
     def get_notes(self, sheet: str) -> pd.DataFrame:
         data = self.get_rows(sheet)
-        if sheet == "nouns":
+        if sheet in {"nouns", "adverbs"}:
             for col in ["tag", "sub tag 1", "sub tag 2"]:
-                data[col] = data[col].fillna("")
+                if col in data:
+                    data[col] = data[col].fillna("")
         return data

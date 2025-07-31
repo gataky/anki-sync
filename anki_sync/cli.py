@@ -6,8 +6,11 @@ import genanki
 
 from anki_sync.core.gsheets import GoogleSheetsManager
 from anki_sync.core.models.adjective import Adjective
+from anki_sync.core.models.adverb import Adverb
+from anki_sync.core.models.conjunction import Conjunction
 from anki_sync.core.models.deck import Deck, DeckInfo
 from anki_sync.core.models.noun import Noun
+from anki_sync.core.models.preposition import Preposition
 from anki_sync.core.models.verb import VerbConjugation
 from anki_sync.core.sql import AnkiDatabase
 
@@ -38,18 +41,13 @@ def sync() -> None:
     click.secho(f"ANKI_DB_PATH   : {ANKI_DB_PATH}", fg="blue")
     click.secho(f"ANKI_MEDIA_PATH: {ANKI_MEDIA_PATH}", fg="blue")
 
-    ndi = DeckInfo(
-        sheet="nouns",
-        note_class=Noun,
-    )
-    vdi = DeckInfo(
-        sheet="verbs conjugated",
-        note_class=VerbConjugation,
-    )
-    adi = DeckInfo(
-        sheet="adjectives",
-        note_class=Adjective,
-    )
+    noun_di = DeckInfo(sheet="nouns", note_class=Noun)
+    verb_di = DeckInfo(sheet="verbs conjugated", note_class=VerbConjugation)
+    adje_di = DeckInfo(sheet="adjectives", note_class=Adjective)
+    aver_di = DeckInfo(sheet="adverbs", note_class=Adverb)
+    prep_di = DeckInfo(sheet="prepositions", note_class=Preposition)
+    conj_di = DeckInfo(sheet="conjunctions", note_class=Conjunction)
+    decks = [noun_di, verb_di, adje_di, aver_di, prep_di, conj_di]
 
     gsheets = GoogleSheetsManager(os.environ.get("GOOGLE_SHEET_ID", ""))
     deck = Deck("Greek", ANKI_MEDIA_PATH)
@@ -59,7 +57,7 @@ def sync() -> None:
     with AnkiDatabase(ANKI_DB_PATH) as anki_db:
 
         click.secho("processing sheet:", fg="yellow")
-        for deck_meta in [ndi, vdi, adi]:
+        for deck_meta in decks:
             click.secho(f"   * {deck_meta.sheet}", fg="yellow")
             rtu = deck.generate(anki_db, gsheets, deck_meta)
             rows_to_update.extend(rtu)

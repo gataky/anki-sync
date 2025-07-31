@@ -11,14 +11,16 @@ from anki_sync.core.sql import AnkiDatabase
 from anki_sync.core.synthesizers.audio_synthesizer import AudioSynthesizer
 
 from .adjective import Adjective
+from .adverb import Adverb
 from .noun import Noun
+from .preposition import Preposition
 from .verb import VerbConjugation
 
 
 @attr.s(auto_attribs=True, init=True)
 class DeckInfo:
     sheet: str
-    note_class: type[Noun | VerbConjugation | Adjective]
+    note_class: type[Noun | VerbConjugation | Adjective | Adverb | Preposition]
     synthesizer: Literal["elevenlabs", "google"] = "google"
     source: str = "remote"
 
