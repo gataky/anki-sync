@@ -5,13 +5,15 @@ import click
 import genanki
 
 from anki_sync.core.gsheets import GoogleSheetsManager
-from anki_sync.core.models.adjective import Adjective
-from anki_sync.core.models.adverb import Adverb
-from anki_sync.core.models.conjunction import Conjunction
-from anki_sync.core.models.deck import Deck, DeckInfo
-from anki_sync.core.models.noun import Noun
-from anki_sync.core.models.preposition import Preposition
-from anki_sync.core.models.verb import VerbConjugation
+from anki_sync.core.models.genanki import Deck, DeckInfo
+from anki_sync.core.models.word import (
+    Adjective,
+    Adverb,
+    Conjunction,
+    Noun,
+    Preposition,
+    Verb,
+)
 from anki_sync.core.sql import AnkiDatabase
 
 # --- Configuration ---
@@ -41,16 +43,17 @@ def sync() -> None:
     click.secho(f"ANKI_DB_PATH   : {ANKI_DB_PATH}", fg="blue")
     click.secho(f"ANKI_MEDIA_PATH: {ANKI_MEDIA_PATH}", fg="blue")
 
-    noun_di = DeckInfo(sheet="nouns", note_class=Noun)
-    verb_di = DeckInfo(sheet="verbs conjugated", note_class=VerbConjugation)
     adje_di = DeckInfo(sheet="adjectives", note_class=Adjective)
     aver_di = DeckInfo(sheet="adverbs", note_class=Adverb)
-    prep_di = DeckInfo(sheet="prepositions", note_class=Preposition)
     conj_di = DeckInfo(sheet="conjunctions", note_class=Conjunction)
-    decks = [noun_di, verb_di, adje_di, aver_di, prep_di, conj_di]
+    prep_di = DeckInfo(sheet="prepositions", note_class=Preposition)
+    noun_di = DeckInfo(sheet="nouns", note_class=Noun)
+    verb_di = DeckInfo(sheet="verbs conjugated", note_class=Verb)
+    # decks = [noun_di, verb_di, adje_di, aver_di, prep_di, conj_di]
+    decks = [noun_di]
 
     gsheets = GoogleSheetsManager(os.environ.get("GOOGLE_SHEET_ID", ""))
-    deck = Deck("Greek", ANKI_MEDIA_PATH)
+    deck = Deck("Test", ANKI_MEDIA_PATH)
     package = genanki.Package(deck)
     rows_to_update = []
 

@@ -20,12 +20,12 @@ class AnkiDatabase:
         self.conn: sqlite3.Connection | None = None
         self.id_gen = itertools.count(int(time.time() * 1000))
 
-        if not self.path.is_file():
+        if self.path.is_file() is False:
             raise FileNotFoundError(f"file not found: {self.path.resolve()}")
 
         self.conn = sqlite3.connect(self.path.resolve())
 
-    def __enter__(self) -> sqlite3.Connection:
+    def __enter__(self) -> "AnkiDatabase":
         self.conn = sqlite3.connect(self.path.resolve())
         return self
 
@@ -38,13 +38,14 @@ class AnkiDatabase:
             self.close()
 
     def close(self):
-        self.conn.close()
+        if self.conn:
+            self.conn.close()
 
     def get_notes(self) -> pd.DataFrame:
         return self._get_table(Table.NOTES)
 
     def get_cards(self) -> pd.DataFrame:
-        return self._get_table(Table.Table)
+        return self._get_table(Table.CARDS)
 
     def get_cards_by_note_id(self, note_id: int) -> pd.DataFrame:
         query = "SELECT * FROM cards WHERE nid = ? ORDER BY ord"
