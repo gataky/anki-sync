@@ -9,6 +9,7 @@ from anki_sync.core.models.audio import AudioMeta
 from anki_sync.core.models.note import Note
 from anki_sync.core.sql import AnkiDatabase
 from anki_sync.utils.guid import generate_guid
+from anki_sync.core.models.constants import ANKI_NOTE_MODEL
 
 
 class PartOfSpeech(Enum):
@@ -58,11 +59,11 @@ class BaseWord:
     part_of_speech: PartOfSpeech
 
     # Optional fields for a word.
-    definitions: str | None = None
-    synonyms: str | None = None
-    antonyms: str | None = None
-    etymology: str | None = None
-    notes: str | None = None
+    definitions: str = ""
+    synonyms: str  = ""
+    antonyms: str = ""
+    etymology: str = ""
+    notes: str = ""
 
     # TODO: How do we convert the input into an enum?
     gender: Gender = Gender.UNKNOWN
@@ -148,12 +149,13 @@ class BaseWord:
             self.notes,
         ]
 
+        tags = self.get_note_tags()
         return Note(
             model=ANKI_NOTE_MODEL,
             guid=self.guid,
             id=self.id,
             fields=note_fields,
-            tags=self.get_note_tags(),
+            tags=tags,
             old_db_conn=old_db_conn,
         )
 

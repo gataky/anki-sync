@@ -1,9 +1,7 @@
-import os
-import pathlib
-
 import click
 import genanki
 
+from anki_sync.config import get_config, load_config_from_env
 from anki_sync.core.gsheets import GoogleSheetsManager
 from anki_sync.core.models.genanki import Deck, DeckInfo
 from anki_sync.core.models.word import (
@@ -16,14 +14,6 @@ from anki_sync.core.models.word import (
 )
 from anki_sync.core.sql import AnkiDatabase
 
-# --- Configuration ---
-USER = "User 1"
-ANKI_PATH = pathlib.Path(
-    f"{os.environ.get("HOME")}/Library/Application Support/Anki2/{USER}"
-)
-ANKI_DB_PATH = pathlib.Path(os.path.join(ANKI_PATH, "collection.anki2"))
-ANKI_MEDIA_PATH = pathlib.Path(os.path.join(ANKI_PATH, "collection.media"))
-
 
 @click.group()
 def main() -> None:
@@ -35,29 +25,45 @@ def main() -> None:
     """
 
 
+@main.command(name="config")
+def show_config() -> None:
+    """Show current configuration."""
+    load_config_from_env()
+    config = get_config()
+    config.print_config()
+
+
 @main.command(name="sync")
 def sync() -> None:
+    # Load configuration from environment
+    load_config_from_env()
+    config = get_config()
+    
+    # Validate configuration
+    if not config.validate():
+        click.secho("Configuration validation failed. Please check your environment variables.", fg="red")
+        return
 
-    click.secho(f"USER           : {USER}", fg="blue")
-    click.secho(f"ANKI_PATH      : {ANKI_PATH}", fg="blue")
-    click.secho(f"ANKI_DB_PATH   : {ANKI_DB_PATH}", fg="blue")
-    click.secho(f"ANKI_MEDIA_PATH: {ANKI_MEDIA_PATH}", fg="blue")
+    click.secho(f"USER           : {config.user}", fg="blue")
+    click.secho(f"ANKI_PATH      : {config.anki_path}", fg="blue")
+    click.secho(f"ANKI_DB_PATH   : {config.anki_db_path}", fg="blue")
+    click.secho(f"ANKI_MEDIA_PATH: {config.anki_media_path}", fg="blue")
 
-    adje_di = DeckInfo(sheet="adjectives", note_class=Adjective)
-    aver_di = DeckInfo(sheet="adverbs", note_class=Adverb)
-    conj_di = DeckInfo(sheet="conjunctions", note_class=Conjunction)
-    prep_di = DeckInfo(sheet="prepositions", note_class=Preposition)
-    noun_di = DeckInfo(sheet="nouns", note_class=Noun)
-    verb_di = DeckInfo(sheet="verbs conjugated", note_class=Verb)
+    adje_di = DeckInfo(sheet="adjectives", note_class=Adjective, synthesizer=config.audio_synthesizer)
+    aver_di = DeckInfo(sheet="adverbs", note_class=Adverb, synthesizer=config.audio_synthesizer)
+    conj_di = DeckInfo(sheet="conjunctions", note_class=Conjunction, synthesizer=config.audio_synthesizer)
+    prep_di = DeckInfo(sheet="prepositions", note_class=Preposition, synthesizer=config.audio_synthesizer)
+    noun_di = DeckInfo(sheet="nouns", note_class=Noun, synthesizer=config.audio_synthesizer)
+    verb_di = DeckInfo(sheet="verbs conjugated", note_class=Verb, synthesizer=config.audio_synthesizer)
     # decks = [noun_di, verb_di, adje_di, aver_di, prep_di, conj_di]
     decks = [noun_di]
 
-    gsheets = GoogleSheetsManager(os.environ.get("GOOGLE_SHEET_ID", ""))
-    deck = Deck("Test", ANKI_MEDIA_PATH)
+    gsheets = GoogleSheetsManager(config.google_sheet_id)
+    deck = Deck("Test", config.anki_media_path)
     package = genanki.Package(deck)
     rows_to_update = []
 
-    with AnkiDatabase(ANKI_DB_PATH) as anki_db:
+    with AnkiDatabase(config.anki_db_path) as anki_db:
 
         click.secho("processing sheet:", fg="yellow")
         for deck_meta in decks:
@@ -65,9 +71,9 @@ def sync() -> None:
             rtu = deck.generate(anki_db, gsheets, deck_meta)
             rows_to_update.extend(rtu)
 
-        click.secho(f"writing package to greek.apkg", fg="yellow")
+        click.secho(f"writing package to {config.output_filename}", fg="yellow")
         package.media_files.extend(deck.audio_files)
-        package.write_to_file("greek.apkg")
+        package.write_to_file(config.output_filename)
 
     if len(rows_to_update) > 0:
         click.secho(f"updating sheets with missing guids")

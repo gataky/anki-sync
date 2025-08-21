@@ -26,7 +26,8 @@ class AnkiDatabase:
         self.conn = sqlite3.connect(self.path.resolve())
 
     def __enter__(self) -> "AnkiDatabase":
-        self.conn = sqlite3.connect(self.path.resolve())
+        if self.conn is None:
+            self.conn = sqlite3.connect(self.path.resolve())
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
