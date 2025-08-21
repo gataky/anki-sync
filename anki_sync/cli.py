@@ -33,13 +33,65 @@ def show_config() -> None:
     config.print_config()
 
 
+def get_deck_infos(synthesizer: str) -> list[DeckInfo]:
+    """Create and return a list of DeckInfo objects."""
+    return [
+        DeckInfo(
+            sheet="nouns",
+            note_class=Noun,
+            synthesizer=synthesizer,
+        ),
+        # DeckInfo(
+        #     sheet="verbs conjugated",
+        #     note_class=Verb,
+        #     synthesizer=synthesizer,
+        # ),
+        DeckInfo(
+            sheet="adjectives",
+            note_class=Adjective,
+            synthesizer=synthesizer,
+        ),
+        DeckInfo(
+            sheet="adverbs",
+            note_class=Adverb,
+            synthesizer=synthesizer,
+        ),
+        DeckInfo(
+            sheet="prepositions",
+            note_class=Preposition,
+            synthesizer=synthesizer,
+        ),
+        DeckInfo(
+            sheet="conjunctions",
+            note_class=Conjunction,
+            synthesizer=synthesizer,
+        ),
+    ]
+
+
+def process_decks(
+    anki_db: AnkiDatabase,
+    gsheets: GoogleSheetsManager,
+    deck: Deck,
+    decks: list[DeckInfo],
+) -> list[dict]:
+    """Process decks and return rows to update."""
+    rows_to_update = []
+    with click.progressbar(
+        decks, label="Processing decks", item_show_func=lambda d: d.sheet if d else ""
+    ) as bar:
+        for deck_meta in bar:
+            rtu = deck.generate(anki_db, gsheets, deck_meta)
+            rows_to_update.extend(rtu)
+    return rows_to_update
+
+
 @main.command(name="sync")
 def sync() -> None:
-    # Load configuration from environment
+    """Sync command to synchronize data from Google Sheets to Anki."""
     load_config_from_env()
     config = get_config()
 
-    # Validate configuration
     if not config.validate():
         click.secho(
             "Configuration validation failed. Please check your environment variables.",
@@ -52,53 +104,23 @@ def sync() -> None:
     click.secho(f"ANKI_DB_PATH   : {config.anki_db_path}", fg="blue")
     click.secho(f"ANKI_MEDIA_PATH: {config.anki_media_path}", fg="blue")
 
-    adje_di = DeckInfo(
-        sheet="adjectives", note_class=Adjective, synthesizer=config.audio_synthesizer
-    )
-    aver_di = DeckInfo(
-        sheet="adverbs", note_class=Adverb, synthesizer=config.audio_synthesizer
-    )
-    conj_di = DeckInfo(
-        sheet="conjunctions",
-        note_class=Conjunction,
-        synthesizer=config.audio_synthesizer,
-    )
-    prep_di = DeckInfo(
-        sheet="prepositions",
-        note_class=Preposition,
-        synthesizer=config.audio_synthesizer,
-    )
-    noun_di = DeckInfo(
-        sheet="nouns", note_class=Noun, synthesizer=config.audio_synthesizer
-    )
-    verb_di = DeckInfo(
-        sheet="verbs conjugated", note_class=Verb, synthesizer=config.audio_synthesizer
-    )
-    # decks = [noun_di, verb_di, adje_di, aver_di, prep_di, conj_di]
-    decks = [noun_di]
-
+    decks = get_deck_infos(config.audio_synthesizer)
     gsheets = GoogleSheetsManager(config.google_sheet_id)
     deck = Deck("Test", config.anki_media_path)
     package = genanki.Package(deck)
-    rows_to_update = []
 
     with AnkiDatabase(config.anki_db_path) as anki_db:
-
-        click.secho("processing sheet:", fg="yellow")
-        for deck_meta in decks:
-            click.secho(f"   * {deck_meta.sheet}", fg="yellow")
-            rtu = deck.generate(anki_db, gsheets, deck_meta)
-            rows_to_update.extend(rtu)
+        rows_to_update = process_decks(anki_db, gsheets, deck, decks)
 
         click.secho(f"writing package to {config.output_filename}", fg="yellow")
         package.media_files.extend(deck.audio_files)
         package.write_to_file(config.output_filename)
 
-    if len(rows_to_update) > 0:
-        click.secho(f"updating sheets with missing guids")
+    if rows_to_update:
+        click.secho("Updating sheets with missing GUIDs")
         gsheets.batch_update(rows_to_update)
 
-    click.secho(f"deck created successfully", fg="green")
+    click.secho("Deck created successfully", fg="green")
 
 
 if __name__ == "__main__":

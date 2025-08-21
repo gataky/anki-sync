@@ -97,18 +97,15 @@ class BaseWord:
     def __init__(self, **kwargs):
         self._exists_in_anki: bool = False
         self._google_sheet_cell: str = ""
-        self.init(self, **kwargs)
 
-    @staticmethod
-    def init(cls, **kwargs):
         transformed_kwargs = {
             key.lower().replace(" ", "_"): value for key, value in kwargs.items()
         }
 
-        cls_fields = {f.name for f in attr.fields(cls.__class__)}
+        cls_fields = {f.name for f in attr.fields(self.__class__)}
         init_kwargs = {k: v for k, v in transformed_kwargs.items() if k in cls_fields}
 
-        cls.__attrs_init__(**init_kwargs)
+        self.__attrs_init__(**init_kwargs)
 
     @classmethod
     def from_sheets(cls, row: tuple[Hashable, pandas.Series]):
@@ -183,13 +180,10 @@ class BaseWord:
         return AudioMeta(phrase=self.greek, filename=self.audio_filename)
 
     def process_tags(self, series: pandas.Series) -> list[str]:
-        # process tags
-        tag_index: int = -1
-        if "tag" in series:
-            tag_index = cast(int, series.index.get_loc("tag"))
-
-        tags = series.iloc[tag_index:].tolist() if tag_index >= 0 else []
-        self.tags = list(filter(lambda x: x, tags))
+        """Process tags from the input series."""
+        tag_columns = [col for col in series.index if "tag" in str(col).lower()]
+        tags = [series[col] for col in tag_columns if series[col]]
+        self.tags = tags
         return self.tags
 
     def process_audio_filename(self) -> str:
