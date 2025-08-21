@@ -5,11 +5,17 @@ from typing import Hashable, cast
 import attr
 import pandas
 
-from anki_sync.core.models.audio import AudioMeta
+from anki_sync.core.models.constants import ANKI_NOTE_MODEL
 from anki_sync.core.models.note import Note
 from anki_sync.core.sql import AnkiDatabase
 from anki_sync.utils.guid import generate_guid
-from anki_sync.core.models.constants import ANKI_NOTE_MODEL
+
+
+@attr.s(auto_attribs=True, frozen=True)
+class AudioMeta:
+
+    phrase: str
+    filename: str
 
 
 class PartOfSpeech(Enum):
@@ -60,7 +66,7 @@ class BaseWord:
 
     # Optional fields for a word.
     definitions: str = ""
-    synonyms: str  = ""
+    synonyms: str = ""
     antonyms: str = ""
     etymology: str = ""
     notes: str = ""

@@ -33,15 +33,8 @@ class Note(genanki.Note):
         """Get cards associated with this note."""
         if not self.old_db_conn:
             return []
-            
-        card_data = self.old_db_conn.get_cards_by_note_id(self.id)
-        # if we can't find card data in the old database this means
-        # we don't have a note generated in anki yet. Let the normal
-        # flow of genanki take over and create a new card
 
-        # if len(card_data) == 0:
-        #     return self._front_back_cards()
-        # else:
+        card_data = self.old_db_conn.get_cards_by_note_id(self.id)
 
         self._cards = []
         for idx, data in card_data.iterrows():
@@ -147,7 +140,7 @@ class Card(genanki.Card):
 
 class Rev:
     """Revision log entry."""
-    
+
     order = ["id", "cid", "usn", "ease", "ivl", "lastIvl", "factor", "time", "type"]
 
     def __init__(self, data: pd.DataFrame):

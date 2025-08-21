@@ -38,10 +38,13 @@ def sync() -> None:
     # Load configuration from environment
     load_config_from_env()
     config = get_config()
-    
+
     # Validate configuration
     if not config.validate():
-        click.secho("Configuration validation failed. Please check your environment variables.", fg="red")
+        click.secho(
+            "Configuration validation failed. Please check your environment variables.",
+            fg="red",
+        )
         return
 
     click.secho(f"USER           : {config.user}", fg="blue")
@@ -49,12 +52,28 @@ def sync() -> None:
     click.secho(f"ANKI_DB_PATH   : {config.anki_db_path}", fg="blue")
     click.secho(f"ANKI_MEDIA_PATH: {config.anki_media_path}", fg="blue")
 
-    adje_di = DeckInfo(sheet="adjectives", note_class=Adjective, synthesizer=config.audio_synthesizer)
-    aver_di = DeckInfo(sheet="adverbs", note_class=Adverb, synthesizer=config.audio_synthesizer)
-    conj_di = DeckInfo(sheet="conjunctions", note_class=Conjunction, synthesizer=config.audio_synthesizer)
-    prep_di = DeckInfo(sheet="prepositions", note_class=Preposition, synthesizer=config.audio_synthesizer)
-    noun_di = DeckInfo(sheet="nouns", note_class=Noun, synthesizer=config.audio_synthesizer)
-    verb_di = DeckInfo(sheet="verbs conjugated", note_class=Verb, synthesizer=config.audio_synthesizer)
+    adje_di = DeckInfo(
+        sheet="adjectives", note_class=Adjective, synthesizer=config.audio_synthesizer
+    )
+    aver_di = DeckInfo(
+        sheet="adverbs", note_class=Adverb, synthesizer=config.audio_synthesizer
+    )
+    conj_di = DeckInfo(
+        sheet="conjunctions",
+        note_class=Conjunction,
+        synthesizer=config.audio_synthesizer,
+    )
+    prep_di = DeckInfo(
+        sheet="prepositions",
+        note_class=Preposition,
+        synthesizer=config.audio_synthesizer,
+    )
+    noun_di = DeckInfo(
+        sheet="nouns", note_class=Noun, synthesizer=config.audio_synthesizer
+    )
+    verb_di = DeckInfo(
+        sheet="verbs conjugated", note_class=Verb, synthesizer=config.audio_synthesizer
+    )
     # decks = [noun_di, verb_di, adje_di, aver_di, prep_di, conj_di]
     decks = [noun_di]
 

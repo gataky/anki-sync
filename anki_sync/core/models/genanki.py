@@ -1,14 +1,10 @@
 import hashlib
 import os
 import pathlib
-import sqlite3
-import time
 from typing import Literal
 
 import attr
 import genanki
-import pandas as pd
-from cached_property import cached_property
 
 from anki_sync.core.gsheets import GoogleSheetsManager
 from anki_sync.core.models.word import (
@@ -19,7 +15,6 @@ from anki_sync.core.models.word import (
     Preposition,
     Verb,
 )
-from anki_sync.core.models.note import Note, Card, Rev
 from anki_sync.core.sql import AnkiDatabase
 from anki_sync.core.synthesizers.audio_synthesizer import AudioSynthesizer
 
