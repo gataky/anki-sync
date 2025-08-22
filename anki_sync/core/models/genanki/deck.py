@@ -8,7 +8,10 @@ import click
 import genanki
 
 from anki_sync.core.gsheets import GoogleSheetsManager
-from anki_sync.core.models.word import Word
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from anki_sync.core.models.word import Word
 from anki_sync.core.sql import AnkiDatabase
 from anki_sync.core.synthesizers.audio_synthesizer import AudioSynthesizer
 
@@ -16,7 +19,7 @@ from anki_sync.core.synthesizers.audio_synthesizer import AudioSynthesizer
 @attr.s(auto_attribs=True, init=True)
 class DeckInfo:
     sheet: str
-    note_class: type[Word]
+    note_class: type["Word"]
     synthesizer: Literal["elevenlabs", "google"] = "google"
     source: str = "remote"
 

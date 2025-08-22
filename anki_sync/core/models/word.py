@@ -1,12 +1,11 @@
 import json
-from enum import Enum
 from typing import Hashable, cast
 
 import attr
 import pandas
 
-from anki_sync.core.models.constants import ANKI_NOTE_MODEL
-from anki_sync.core.models.note import Note
+from anki_sync.core.models.constants import ANKI_NOTE_MODEL, PartOfSpeech, Gender, Person, Number, Tense
+from anki_sync.core.models.genanki import Note
 from anki_sync.core.sql import AnkiDatabase
 from anki_sync.utils.guid import generate_guid
 
@@ -16,40 +15,6 @@ class AudioMeta:
 
     phrase: str
     filename: str
-
-
-class PartOfSpeech(Enum):
-    ADJECTIVE = "adjective"
-    ADVERB = "adverb"
-    CONJUNCTION = "conjunction"
-    NOUN = "noun"
-    PREPOSITION = "preposition"
-    VERB = "verb"
-    UNKNOWN = "unknown"
-
-
-class Gender(Enum):
-    MASCULINE = "masculine"
-    FEMININE = "feminine"
-    NEUTER = "neuter"
-    UNKNOWN = ""
-
-
-class Person(Enum):
-    FIRST = "1st"
-    SECOND = "2nd"
-    THIRD = "3rd"
-    UNKNOWN = ""
-
-
-class Number(Enum):
-    SINGULAR = "singular"
-    PLURAL = "plural"
-    UNKNOWN = ""
-
-
-class Tense(Enum):
-    UNKNOWN = ""
 
 
 @attr.s(auto_attribs=True, init=False)
