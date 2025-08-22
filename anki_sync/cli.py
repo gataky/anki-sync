@@ -41,11 +41,11 @@ def get_deck_infos(synthesizer: str) -> list[DeckInfo]:
             note_class=Noun,
             synthesizer=synthesizer,
         ),
-        # DeckInfo(
-        #     sheet="verbs conjugated",
-        #     note_class=Verb,
-        #     synthesizer=synthesizer,
-        # ),
+        DeckInfo(
+            sheet="verbs",
+            note_class=Verb,
+            synthesizer=synthesizer,
+        ),
         DeckInfo(
             sheet="adjectives",
             note_class=Adjective,
@@ -106,7 +106,7 @@ def sync() -> None:
 
     decks = get_deck_infos(config.audio_synthesizer)
     gsheets = GoogleSheetsManager(config.google_sheet_id)
-    deck = Deck("Test", config.anki_media_path)
+    deck = Deck("Greek", config.anki_media_path)
     package = genanki.Package(deck)
 
     with AnkiDatabase(config.anki_db_path) as anki_db:

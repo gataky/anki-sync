@@ -72,10 +72,10 @@ class BaseWord:
     notes: str = ""
 
     # TODO: How do we convert the input into an enum?
-    gender: Gender = Gender.UNKNOWN
-    person: Person = Person.UNKNOWN
-    tense: Tense = Tense.UNKNOWN
-    number: Number = Number.UNKNOWN
+    gender: Gender = attr.ib(default=Gender.UNKNOWN, converter=Gender)
+    person: Person = attr.ib(default=Person.UNKNOWN, converter=Person)
+    tense: Tense = attr.ib(default=Tense.UNKNOWN, converter=Tense)
+    number: Number = attr.ib(default=Number.UNKNOWN, converter=Number)
 
     # The audio filename
     audio_filename: str = ""
@@ -144,7 +144,7 @@ class BaseWord:
             self.english,
             self.greek,
             self.audio_filename,
-            f"{self.part_of_speech.value} {self.gender}",
+            f"{self.part_of_speech.value} {self.gender.value}",
             self.definitions,
             self.synonyms,
             self.antonyms,

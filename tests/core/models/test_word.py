@@ -52,7 +52,7 @@ class TestBaseWord:
         assert word.english == "test english"
         assert word.greek == "test greek"
         assert word.part_of_speech == PartOfSpeech.NOUN
-        assert word.gender == "masculine"
+        assert word.gender == Gender.MASCULINE
         assert word.tags == ["test tag", "test sub tag 1"]
         assert word.audio_filename == "test greek.mp3"
         assert word._google_sheet_cell == "A2"
