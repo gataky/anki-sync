@@ -4,17 +4,11 @@ import pathlib
 from typing import Literal
 
 import attr
+import click
 import genanki
 
 from anki_sync.core.gsheets import GoogleSheetsManager
-from anki_sync.core.models.word import (
-    Adjective,
-    Adverb,
-    Conjunction,
-    Noun,
-    Preposition,
-    Verb,
-)
+from anki_sync.core.models.word import Word
 from anki_sync.core.sql import AnkiDatabase
 from anki_sync.core.synthesizers.audio_synthesizer import AudioSynthesizer
 
@@ -22,7 +16,7 @@ from anki_sync.core.synthesizers.audio_synthesizer import AudioSynthesizer
 @attr.s(auto_attribs=True, init=True)
 class DeckInfo:
     sheet: str
-    note_class: type[Adjective | Adverb | Conjunction | Noun | Preposition | Verb]
+    note_class: type[Word]
     synthesizer: Literal["elevenlabs", "google"] = "google"
     source: str = "remote"
 
@@ -47,25 +41,30 @@ class Deck(genanki.Deck):
         synth = AudioSynthesizer(self.media_dir, deck_info.synthesizer)
 
         rows_to_update = []
-        for row in gnotes.iterrows():
-            gnote = deck_info.note_class.from_sheets(row)
-            anote = gnote.to_note(anki_db)
+        with click.progressbar(
+            gnotes.iterrows(),
+            label="Processing words",
+            item_show_func=lambda d: d[1]["english"] if d else "",
+        ) as bar:
+            for row in bar:
+                gnote = deck_info.note_class.from_sheets(row)
+                anote = gnote.to_note(anki_db)
 
-            self.add_audio(gnote.audio_filename)
-            self.add_note(anote)
+                self.add_audio(gnote.audio_filename)
+                self.add_note(anote)
 
-            audio = gnote.get_audio_meta()
-            synth.synthesize_if_needed(audio.phrase, audio.filename)
+                audio = gnote.get_audio_meta()
+                synth.synthesize_if_needed(audio.phrase, audio.filename)
 
-            if not gnote.exists_in_anki():
-                cell = f"{deck_info.sheet}!{gnote._google_sheet_cell}"
-                rows_to_update.append(
-                    {
-                        "range": cell,
-                        "values": [[gnote.guid]],
-                    }
-                )
+                if not gnote.exists_in_anki():
+                    cell = f"{deck_info.sheet}!{gnote._google_sheet_cell}"
+                    rows_to_update.append(
+                        {
+                            "range": cell,
+                            "values": [[gnote.guid]],
+                        }
+                    )
 
-                print(f"        + {gnote.guid}: {gnote.english}")
+                    print(f"        + {gnote.guid}: {gnote.english}")
 
         return rows_to_update

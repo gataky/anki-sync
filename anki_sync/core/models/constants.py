@@ -1,27 +1,37 @@
 import genanki
 
-ANKI_MODEL_ID = 2607392322
-ANKI_MODEL_NAME = "Otter Note"
+ANKI_MODEL_ID = 2607392323
+ANKI_MODEL_NAME = "greek"
 
-
-ANKI_FRONT_TEMPLATE = """
+ANKI_CARD2_FRONT_TEMPLATE = """
 <div class="front-word">
-  {{english}}
+  {{greek}}
 </div>
+{{#audio filename}}
+<span class="audio-btn-sticky" onclick="new Audio('{{audio filename}}').play()">
+  <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#78A75A">
+    <path d="M640-440v-80h160v80H640Zm48 280-128-96 48-64 128 96-48 64Zm-80-480-48-64 128-96 48 64-128 96ZM120-360v-240h160l200-200v640L280-360H120Zm280-246-86 86H200v80h114l86 86v-252ZM300-480Z"/>
+  </svg>
+</span>
+{{/audio filename}}
+{{#greek}}
+<script>
+  var audioButton = document.querySelector('.audio-btn-sticky');
+  if (audioButton) {
+    audioButton.click();
+  }
+</script>
+{{/greek}}
 """
 
-ANKI_BACK_TEMPLATE = """
+ANKI_CARD2_BACK_TEMPLATE = """
+<div class="front-word">
+  {{greek}}
+</div>
+<hr>
 <div class="entry">
   <header class="head">
-    <div class="hw">{{greek}}</div>
-    {{#audio filename}}
-    <span class="audio-btn" onclick="new Audio('{{audio filename}}').play()">
-      <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#78A75A">
-        <path d="M640-440v-80h160v80H640Zm48 280-128-96 48-64 128 96-48 64Zm-80-480-48-64 128-96 48 64-128 96ZM120-360v-240h160l200-200v640L280-360H120Zm280-246-86 86H200v80h114l86 86v-252ZM300-480Z"/>
-      </svg>
-    </span>
-    {{/audio filename}}
-
+    <div class="hw">{{english}}</div>
 
     {{#part of speech}}<div class="pos">{{part of speech}}</div>{{/part of speech}}
   </header>
@@ -45,6 +55,68 @@ ANKI_BACK_TEMPLATE = """
     </section>
   {{/notes}}
 </div>
+{{#audio filename}}
+<span class="audio-btn-sticky" onclick="new Audio('{{audio filename}}').play()">
+  <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#78A75A">
+    <path d="M640-440v-80h160v80H640Zm48 280-128-96 48-64 128 96-48 64Zm-80-480-48-64 128-96 48 64-128 96ZM120-360v-240h160l200-200v640L280-360H120Zm280-246-86 86H200v80h114l86 86v-252ZM300-480Z"/>
+  </svg>
+</span>
+{{/audio filename}}
+"""
+
+
+ANKI_CARD1_FRONT_TEMPLATE = """
+<div class="front-word">
+  {{english}}
+</div>
+"""
+
+ANKI_CARD1_BACK_TEMPLATE = """
+<div class="front-word">
+  {{english}}
+</div>
+<hr>
+<div class="entry">
+  <header class="head">
+    <div class="hw">{{greek}}</div>
+
+    {{#part of speech}}<div class="pos">{{part of speech}}</div>{{/part of speech}}
+  </header>
+
+  <section class="senses">
+    <div class="defs">{{definitions}}</div>
+  </section>
+
+  {{#synonyms}}<div class="rel"><span class="label">Syn.</span> {{synonyms}}</div>{{/synonyms}}
+  {{#antonyms}}<div class="rel"><span class="label">Ant.</span> {{antonyms}}</div>{{/antonyms}}
+
+  {{#etymology}}
+    <section class="ety">
+      <span class="label">Etym.</span> {{etymology}}
+    </section>
+  {{/etymology}}
+
+  {{#notes}}
+    <section class="notes">
+      <span class="label">Notes</span> {{notes}}
+    </section>
+  {{/notes}}
+</div>
+{{#audio filename}}
+<span class="audio-btn-sticky" onclick="new Audio('{{audio filename}}').play()">
+  <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#78A75A">
+    <path d="M640-440v-80h160v80H640Zm48 280-128-96 48-64 128 96-48 64Zm-80-480-48-64 128-96 48 64-128 96ZM120-360v-240h160l200-200v640L280-360H120Zm280-246-86 86H200v80h114l86 86v-252ZM300-480Z"/>
+  </svg>
+</span>
+{{/audio filename}}
+{{#greek}}
+<script>
+  var audioButton = document.querySelector('.audio-btn-sticky');
+  if (audioButton) {
+    audioButton.click();
+  }
+</script>
+{{/greek}}
 """
 
 ANKI_SHARED_CSS = """
@@ -59,18 +131,17 @@ ANKI_SHARED_CSS = """
 }
 
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --fg:#e5e7eb;
-    --muted:#94a3b8;
-    --accent:#cbd5e1;
-    --bg:#0b0f17;
-    --rule:#1f2937;
-    --chip:#111827;
-  }
+.nightMode .card {
+  --fg:#e5e7eb;
+  --muted:#94a3b8;
+  --accent:#cbd5e1;
+  --bg:#0b0f17;
+  --rule:#1f2937;
+  --chip:#111827;
 }
 
 .card {
+  position: relative; /* Add this */
   font-family: ui-serif, "Iowan Old Style", "Palatino Linotype", Palatino, "Times New Roman", serif;
   background: var(--bg);
   color: var(--fg);
@@ -191,22 +262,33 @@ ANKI_SHARED_CSS = """
   display: none;
 }
 
-.audio-btn {
+.audio-btn-sticky {
+  position: absolute;
+  top: 20px;
+  right: 20px;
   cursor: pointer;
   vertical-align: middle;
   transition: transform 0.2s;
+  background: transparent;
+  z-index: 1;
 }
-.audio-btn:hover {
+
+.audio-btn-sticky:hover {
   transform: scale(1.1);
 }
 """
 
 ANKI_NOTE_MODEL_CARDS = [
     {
-        "name": "Card 1 Noun v2",
-        "qfmt": ANKI_FRONT_TEMPLATE,
-        "afmt": ANKI_BACK_TEMPLATE,
-    }
+        "name": "en2gr",
+        "qfmt": ANKI_CARD1_FRONT_TEMPLATE,
+        "afmt": ANKI_CARD1_BACK_TEMPLATE,
+    },
+    {
+        "name": "gr2en",
+        "qfmt": ANKI_CARD2_FRONT_TEMPLATE,
+        "afmt": ANKI_CARD2_BACK_TEMPLATE,
+    },
 ]
 
 ANKI_NOTE_MODEL_FIELDS = [

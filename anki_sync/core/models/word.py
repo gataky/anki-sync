@@ -53,16 +53,11 @@ class Tense(Enum):
 
 
 @attr.s(auto_attribs=True, init=False)
-class BaseWord:
+class Word:
 
     # Every note will have these fields
     english: str
     greek: str
-
-    # The part of speech this word belongs to. The value is shown here
-    # to make it easier to see all fields available but is actually set
-    # in the sub class.
-    part_of_speech: PartOfSpeech
 
     # Optional fields for a word.
     definitions: str = ""
@@ -71,7 +66,9 @@ class BaseWord:
     etymology: str = ""
     notes: str = ""
 
-    # TODO: How do we convert the input into an enum?
+    part_of_speech: PartOfSpeech = attr.ib(
+        default=PartOfSpeech.UNKNOWN, converter=PartOfSpeech
+    )
     gender: Gender = attr.ib(default=Gender.UNKNOWN, converter=Gender)
     person: Person = attr.ib(default=Person.UNKNOWN, converter=Person)
     tense: Tense = attr.ib(default=Tense.UNKNOWN, converter=Tense)
@@ -189,33 +186,3 @@ class BaseWord:
     def process_audio_filename(self) -> str:
         self.audio_filename = f"{self.greek}.mp3"
         return self.audio_filename
-
-
-@attr.s(auto_attribs=True, init=False)
-class Adjective(BaseWord):
-    part_of_speech: PartOfSpeech = PartOfSpeech.ADJECTIVE
-
-
-@attr.s(auto_attribs=True, init=False)
-class Adverb(BaseWord):
-    part_of_speech: PartOfSpeech = PartOfSpeech.ADVERB
-
-
-@attr.s(auto_attribs=True, init=False)
-class Conjunction(BaseWord):
-    part_of_speech: PartOfSpeech = PartOfSpeech.CONJUNCTION
-
-
-@attr.s(auto_attribs=True, init=False)
-class Noun(BaseWord):
-    part_of_speech: PartOfSpeech = PartOfSpeech.NOUN
-
-
-@attr.s(auto_attribs=True, init=False)
-class Preposition(BaseWord):
-    part_of_speech: PartOfSpeech = PartOfSpeech.PREPOSITION
-
-
-@attr.s(auto_attribs=True, init=False)
-class Verb(BaseWord):
-    part_of_speech: PartOfSpeech = PartOfSpeech.VERB

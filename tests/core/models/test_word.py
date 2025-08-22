@@ -4,12 +4,7 @@ from unittest.mock import MagicMock, patch
 import pandas as pd
 import pytest
 
-from anki_sync.core.models.word import (
-    AudioMeta,
-    BaseWord,
-    Noun,
-    PartOfSpeech,
-)
+from anki_sync.core.models.word import AudioMeta, Noun, PartOfSpeech, Word
 
 
 @pytest.fixture
@@ -32,7 +27,7 @@ def noun_series(noun_data: dict) -> pd.Series:
 
 class TestBaseWord:
     def test_init(self, noun_data: dict):
-        word = BaseWord(**noun_data)
+        word = Word(**noun_data)
         assert word.english == "test english"
         assert word.greek == "test greek"
 
@@ -135,6 +130,3 @@ class TestBaseWord:
         word = Noun(**noun_data)
         filename = word.process_audio_filename()
         assert filename == "test greek.mp3"
-
-
-
