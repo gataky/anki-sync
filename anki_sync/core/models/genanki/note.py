@@ -2,10 +2,10 @@ import time
 from typing import List
 
 import genanki
-import pandas as pd
 from cached_property import cached_property
 
 from anki_sync.core.sql import AnkiDatabase
+
 from .card import Card
 
 

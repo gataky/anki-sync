@@ -4,7 +4,14 @@ from typing import Hashable, cast
 import attr
 import pandas
 
-from anki_sync.core.models.constants import ANKI_NOTE_MODEL, PartOfSpeech, Gender, Person, Number, Tense
+from anki_sync.core.models.constants import (
+    ANKI_NOTE_MODEL,
+    Gender,
+    Number,
+    PartOfSpeech,
+    Person,
+    Tense,
+)
 from anki_sync.core.models.genanki import Note
 from anki_sync.core.sql import AnkiDatabase
 from anki_sync.utils.guid import generate_guid

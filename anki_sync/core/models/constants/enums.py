@@ -5,6 +5,7 @@ from enum import Enum
 
 class PartOfSpeech(Enum):
     """Parts of speech for vocabulary words."""
+
     ADJECTIVE = "adjective"
     ADVERB = "adverb"
     CONJUNCTION = "conjunction"
@@ -16,6 +17,7 @@ class PartOfSpeech(Enum):
 
 class Gender(Enum):
     """Grammatical gender for vocabulary words."""
+
     MASCULINE = "masculine"
     FEMININE = "feminine"
     NEUTER = "neuter"
@@ -24,6 +26,7 @@ class Gender(Enum):
 
 class Person(Enum):
     """Grammatical person for verbs."""
+
     FIRST = "1st"
     SECOND = "2nd"
     THIRD = "3rd"
@@ -32,6 +35,7 @@ class Person(Enum):
 
 class Number(Enum):
     """Grammatical number (singular/plural)."""
+
     SINGULAR = "singular"
     PLURAL = "plural"
     UNKNOWN = ""
@@ -39,4 +43,5 @@ class Number(Enum):
 
 class Tense(Enum):
     """Grammatical tense for verbs."""
+
     UNKNOWN = ""

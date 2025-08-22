@@ -1,17 +1,17 @@
 import hashlib
 import os
 import pathlib
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 import attr
 import click
 import genanki
 
 from anki_sync.core.gsheets import GoogleSheetsManager
-from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from anki_sync.core.models.word import Word
+
 from anki_sync.core.sql import AnkiDatabase
 from anki_sync.core.synthesizers.audio_synthesizer import AudioSynthesizer
 

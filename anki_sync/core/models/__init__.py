@@ -1,17 +1,17 @@
 """Anki Sync Models Package."""
 
-from .word import Word, AudioMeta
-from .genanki import Deck, DeckInfo, Note, Card, Rev
 from .constants import (
-    ANKI_NOTE_MODEL,
     ANKI_MODEL_NAME,
+    ANKI_NOTE_MODEL,
     ANKI_NOTE_MODEL_FIELDS,
-    PartOfSpeech,
     Gender,
-    Person,
     Number,
+    PartOfSpeech,
+    Person,
     Tense,
 )
+from .genanki import Card, Deck, DeckInfo, Note, Rev
+from .word import AudioMeta, Word
 
 __all__ = [
     # Word models
@@ -21,7 +21,7 @@ __all__ = [
     "Deck",
     "DeckInfo",
     "Note",
-    "Card", 
+    "Card",
     "Rev",
     # Constants
     "ANKI_NOTE_MODEL",

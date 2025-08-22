@@ -2,6 +2,7 @@ import pandas as pd
 from cached_property import cached_property
 
 from anki_sync.core.sql import AnkiDatabase
+
 from .rev import Rev
 
 
