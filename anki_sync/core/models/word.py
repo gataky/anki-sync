@@ -114,7 +114,11 @@ class Word:
             self.greek,
             self.audio_filename,
             f"{self.part_of_speech.value} {self.gender.value}",
-            self.definitions,
+            (
+                self.definitions
+                if not self.definitions
+                else "<div>" + self.definitions.replace("\n", "</div><div>") + "</div>"
+            ),
             self.synonyms,
             self.antonyms,
             self.etymology,
