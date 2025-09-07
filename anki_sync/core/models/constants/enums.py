@@ -21,6 +21,10 @@ class Gender(Enum):
     MASCULINE = "masculine"
     FEMININE = "feminine"
     NEUTER = "neuter"
+    A = "a"
+    B1 = "b1"
+    B2 = "b2"
+    IRREGULAR = "irregular"
     UNKNOWN = ""
 
 

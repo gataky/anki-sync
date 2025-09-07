@@ -62,6 +62,7 @@ ANKI_CARD2_BACK_TEMPLATE = """
 """
 
 ANKI_CARD1_FRONT_TEMPLATE = """
+<div style="text-align: left; font-size: 10px; color: grey;">{{part of speech}}</div>
 <div class="front-word">
   {{english}}
 </div>
