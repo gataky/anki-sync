@@ -157,4 +157,13 @@ ANKI_SHARED_CSS = """
 .audio-btn-sticky:hover {
   transform: scale(1.1);
 }
+
+.pos-sticky {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  font-variant: small-caps;
+  letter-spacing: 0.6px;
+  color: var(--muted);
+}
 """

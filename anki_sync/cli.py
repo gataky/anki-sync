@@ -1,6 +1,7 @@
 import click
 import genanki
 
+
 from anki_sync.config import get_config, load_config_from_env
 from anki_sync.core.gsheets import GoogleSheetsManager
 from anki_sync.core.models.genanki import Deck, DeckInfo
@@ -16,7 +17,6 @@ def main() -> None:
     prepending articles and generating tags), optionally synthesizes audio for
     Greek words, and creates an Anki package (.apkg) file.
     """
-
 
 @main.command(name="config")
 def show_config() -> None:
@@ -81,7 +81,6 @@ def sync() -> None:
         gsheets.batch_update(rows_to_update)
 
     click.secho("Deck created successfully", fg="green")
-
 
 if __name__ == "__main__":
     main()
